@@ -598,7 +598,7 @@ document.addEventListener('click',async function(ev){if(ev.target.closest('a[hre
   ev.preventDefault();
   if(a==='tab'){if(ui.view!=='fb')ui.prevView=ui.view;ui.view=t.getAttribute('data-v');ui.page=0;ui.f={};if(ui.view==='dash'&&!D.acts){try{await loadStatsData()}catch(e){D.acts=[]}}render()}
   else if(a==='fbf'){ui.fbf=t.getAttribute('data-v');render()}
-  else if(a==='fbsend'){var fm=$('#fbm').value.trim();if(fm.length<3)return toast('Écrivez au moins quelques mots.','bad');act('send_feedback',{p_kind:$('#fbk').value,p_message:fm,p_page:(tabsFor().filter(function(x){return x[0]===ui.prevView})[0]||[0,''])[1]||null},'Merci ! Votre retour a été envoyé à la direction.')}
+  else if(a==='fbsend'){var fm=$('#fbm').value.trim();if(fm.length<3)return toast('Écrivez au moins quelques mots.','bad');act('send_feedback',{p_kind:$('#fbk').value,p_message:fm,p_page:(tabsFor().filter(function(x){return x[0]===ui.prevView})[0]||[0,''])[1]||null},function(r){try{SB.functions.invoke('notifier-retour',{body:{id:r}}).catch(function(){})}catch(e){}return 'Merci ! Votre retour a été envoyé à la direction.'})}
   else if(a==='fbs'){var fid=+t.getAttribute('data-id'),fr=$('#fr'+fid);act('set_feedback_status',{p_id:fid,p_status:t.getAttribute('data-s'),p_reply:fr?fr.value:null},'Retour mis à jour.')}
   else if(a==='dashp'){ui.dash.rng=t.getAttribute('data-v');render()}
   else if(a==='dashr'){ui.dash.rank=t.getAttribute('data-v');render()}
