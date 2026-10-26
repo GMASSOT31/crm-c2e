@@ -15,3 +15,4 @@ $P -f supabase/seed_demo.sql
 $P -f tests/lot1.sql | grep 'LOT\|FAIL\|ERROR'
 $P -f tests/lot2.sql 2>&1 | grep 'LOT\|FAIL\|ERROR'
 $P -f tests/lot3.sql 2>&1 | grep 'LOT\|FAIL\|ERROR'
+$P -f tests/lot4.sql 2>&1 | grep 'LOT\|FAIL\|ERROR'
