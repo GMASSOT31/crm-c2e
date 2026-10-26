@@ -445,7 +445,7 @@ document.addEventListener('change',function(e){var t=e.target,id=t.id;
   if(id==='smc'){S.set.mailConfigured=t.checked;if(!t.checked)S.set.autoMail=false;render();return}
   if(id==='isheet'){ui.imp.sheet=t.value;loadSheet(ui.imp);return}
   if(id==='ifile'){var fl=t.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){var buf=rd.result;sha(buf).then(function(hash){var im=ui.imp={fname:fl.name,hash:hash};
-    try{if(/\.csv$/i.test(fl.name)){var tx=new TextDecoder('utf-8').decode(buf);if(tx.indexOf('�')>-1)tx=new TextDecoder('windows-1252').decode(buf);im.sheets=['CSV'];im.sheet='CSV';loadRows(im,parseCSV(tx).filter(function(r){return r.join('').trim()}))}
+    try{if(/\.csv$/i.test(fl.name)){var tx=new TextDecoder('utf-8').decode(buf);if(tx.indexOf('\uFFFD')>-1)tx=new TextDecoder('windows-1252').decode(buf);im.sheets=['CSV'];im.sheet='CSV';loadRows(im,parseCSV(tx).filter(function(r){return r.join('').trim()}))}
     else{if(!window.XLSX)throw new Error('lecteur Excel indisponible');var wb=XLSX.read(buf,{type:'array',cellDates:true,raw:true});im.wb=wb;im.sheets=wb.SheetNames;im.sheet=wb.SheetNames.indexOf('CONTACTS')>-1?'CONTACTS':wb.SheetNames[0];loadSheet(im);return}}catch(err){ui.imp=null;toast('Fichier illisible : '+err.message+'. Aucun schéma fournisseur n\'est supposé : vérifiez le format.','bad');return}
     render()})};rd.readAsArrayBuffer(fl);return}});
 function loadSheet(im){var aoa=XLSX.utils.sheet_to_json(im.wb.Sheets[im.sheet],{header:1,raw:true,defval:''});loadRows(im,aoa);render()}
