@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   const { data: me } = await asUser.from('profiles').select('role,active').eq('id', u.user.id).maybeSingle();
   if (!me || !me.active || me.role !== 'admin') return reply({ error: 'Réservé à l\'administrateur.' }, 403);
 
-  let body: { email?: string; name?: string; role?: string };
+  let body: { email?: string; name?: string; role?: string; temp?: boolean };
   try { body = await req.json(); } catch { return reply({ error: 'Requête illisible.' }, 400); }
   const email = String(body.email ?? '').trim().toLowerCase();
   const name = String(body.name ?? '').trim();
@@ -34,13 +34,31 @@ Deno.serve(async (req) => {
   if (!ROLES.includes(role)) return reply({ error: 'Rôle inconnu.' }, 400);
 
   const admin = createClient(url, svc);
-  const { data, error } = await admin.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo: SITE } });
-  if (error || !data?.user) {
-    const m = error?.message ?? '';
-    return reply({ error: /already|registered|exists/i.test(m) ? 'Un compte existe déjà avec cet email.' : 'Création impossible : ' + m }, 400);
+  let uid: string; let link: string | undefined; let password: string | undefined;
+  if (body.temp) {
+    // Mot de passe provisoire : généré ici, montré une seule fois à l'administrateur, changement obligatoire à la 1re connexion.
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    const bytes = crypto.getRandomValues(new Uint8Array(14));
+    password = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+    const { data, error } = await admin.auth.admin.createUser({
+      email, password, email_confirm: true, user_metadata: { must_change_password: true },
+    });
+    if (error || !data?.user) {
+      const m = error?.message ?? '';
+      return reply({ error: /already|registered|exists/i.test(m) ? 'Un compte existe déjà avec cet email.' : 'Création impossible : ' + m }, 400);
+    }
+    uid = data.user.id;
+  } else {
+    const { data, error } = await admin.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo: SITE } });
+    if (error || !data?.user) {
+      const m = error?.message ?? '';
+      return reply({ error: /already|registered|exists/i.test(m) ? 'Un compte existe déjà avec cet email.' : 'Création impossible : ' + m }, 400);
+    }
+    uid = data.user.id;
+    link = data.properties.action_link;
   }
-  const { error: pe } = await admin.from('profiles').upsert({ id: data.user.id, full_name: name, role, active: true });
+  const { error: pe } = await admin.from('profiles').upsert({ id: uid, full_name: name, role, active: true });
   if (pe) return reply({ error: 'Compte créé mais profil non enregistré : ' + pe.message }, 500);
-  await admin.from('audit_log').insert({ actor: u.user.id, action: 'invite_user', entity: 'profiles', entity_id: data.user.id, details: { role } });
-  return reply({ link: data.properties.action_link, id: data.user.id });
+  await admin.from('audit_log').insert({ actor: u.user.id, action: 'invite_user', entity: 'profiles', entity_id: uid, details: { role, temp: !!body.temp } });
+  return reply({ link, password, id: uid });
 });
