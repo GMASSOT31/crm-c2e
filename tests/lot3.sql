@@ -17,3 +17,10 @@ select th2.login(:'ca');
 select th2.expect_error($$select th2.imp('[{"name":"Y"}]', true)$$, 'FORBIDDEN');
 select th2.assert((select count(*) from public.requests where import_batch_id is not null) = 1, 'le commercial ne voit que son dossier historique');
 select 'LOT 3 : tous les tests passent' as resultat;
+-- Attribution d'après le classeur
+select th2.login(:'secr');
+select th2.imp('[{"name":"CLASS UN","phone":"0600000011","hist_note":"Commercial (classeur) : TEST Zoe"},{"name":"CLASS DEUX","hist_note":"Commercial (classeur) : TEST Zoe"}]', true);
+select th2.assert((public.assign_historical('00000000-0000-0000-0000-0000000000c1','TEST Zoe'))->>'assigned' = '1', 'attribution classeur : 1 attribué');
+select th2.assert((select count(*) from public.tasks where request_id in (select id from public.requests where hist_note like '%TEST Zoe%')) = 0, 'aucune tâche créée par l''attribution');
+select th2.assert((select count(*) from public.requests where hist_note like '%TEST Zoe%' and assigned_to is null) = 1, 'le dossier incomplet reste non attribué');
+select 'LOT 3b : attribution classeur OK' as resultat;
