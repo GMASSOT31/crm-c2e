@@ -24,8 +24,21 @@ Deno.serve(async (req) => {
   const { data: me } = await asUser.from('profiles').select('role,active').eq('id', u.user.id).maybeSingle();
   if (!me || !me.active || me.role !== 'admin') return reply({ error: 'Réservé à l\'administrateur.' }, 403);
 
-  let body: { email?: string; name?: string; role?: string; temp?: boolean };
+  let body: { email?: string; name?: string; role?: string; temp?: boolean; reset_user?: string };
   try { body = await req.json(); } catch { return reply({ error: 'Requête illisible.' }, 400); }
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const newPassword = () => Array.from(crypto.getRandomValues(new Uint8Array(14)), (b) => alphabet[b % alphabet.length]).join('');
+  if (body.reset_user) {
+    // Réinitialisation : nouveau mot de passe provisoire (affiché une seule fois), changement obligatoire à la prochaine connexion.
+    const adm = createClient(url, svc);
+    const { data: target } = await adm.from('profiles').select('id,full_name').eq('id', body.reset_user).maybeSingle();
+    if (!target) return reply({ error: 'Compte introuvable.' }, 404);
+    const pw = newPassword();
+    const { error: ue } = await adm.auth.admin.updateUserById(target.id, { password: pw, user_metadata: { must_change_password: true } });
+    if (ue) return reply({ error: 'Réinitialisation impossible : ' + ue.message }, 400);
+    await adm.from('audit_log').insert({ actor: u.user.id, action: 'reset_password', entity: 'profiles', entity_id: target.id });
+    return reply({ password: pw, name: target.full_name });
+  }
   const email = String(body.email ?? '').trim().toLowerCase();
   const name = String(body.name ?? '').trim();
   const role = String(body.role ?? '');
@@ -37,9 +50,7 @@ Deno.serve(async (req) => {
   let uid: string; let link: string | undefined; let password: string | undefined;
   if (body.temp) {
     // Mot de passe provisoire : généré ici, montré une seule fois à l'administrateur, changement obligatoire à la 1re connexion.
-    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    const bytes = crypto.getRandomValues(new Uint8Array(14));
-    password = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+    password = newPassword();
     const { data, error } = await admin.auth.admin.createUser({
       email, password, email_confirm: true, user_metadata: { must_change_password: true },
     });
