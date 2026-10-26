@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>CRM C2e</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+
+/* Mise en page : barre du haut + onglets, contenu en une colonne large ; tableaux défilants, fiche en panneau */
+:root{--bg:#f4f5f2;--card:#fff;--ink:#1d2a2e;--muted:#5d6b6f;--line:#d9dedb;--accent:#c46a00;--accent-ink:#fff;--ok:#1d7a4f;--okbg:#e2f3ea;--warn:#a05a00;--warnbg:#fdeccc;--bad:#b3261e;--badbg:#fbe1de;--info:#1f5f8b;--infobg:#e0eef8;--head:#16353d;--head-ink:#f1f5f4;--hf:'Bricolage Grotesque',system-ui,sans-serif;--bf:'Instrument Sans',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101a1d;--card:#182427;--ink:#e6ecea;--muted:#9bacaf;--line:#2c3d41;--accent:#f0a030;--accent-ink:#1a1100;--ok:#6fd1a0;--okbg:#17342a;--warn:#f0b968;--warnbg:#3a2b10;--bad:#ff9a92;--badbg:#401a17;--info:#8cc4ee;--infobg:#142c3d;--head:#0b1517;--head-ink:#e6ecea;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101a1d;--card:#182427;--ink:#e6ecea;--muted:#9bacaf;--line:#2c3d41;--accent:#f0a030;--accent-ink:#1a1100;--ok:#6fd1a0;--okbg:#17342a;--warn:#f0b968;--warnbg:#3a2b10;--bad:#ff9a92;--badbg:#401a17;--info:#8cc4ee;--infobg:#142c3d;--head:#0b1517;--head-ink:#e6ecea;color-scheme:dark}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--bf);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+h1,h2,h3{font-family:var(--hf);margin:0;text-wrap:balance}h2{font-size:1.35rem}h3{font-size:1.05rem}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 12px;min-height:40px}
+button:hover{border-color:var(--accent)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+button.p{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}button.danger{color:var(--bad);border-color:var(--bad)}button:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:40px;max-width:100%}textarea{width:100%;min-height:150px}
+label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
+.top{background:var(--head);color:var(--head-ink);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--head);z-index:10}
+.bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}.logo{font:700 1.2rem var(--hf)}.logo b{color:var(--accent)}
+.top select,.top input{background:#ffffff14;color:var(--head-ink);border-color:#ffffff33}.top option{color:#000}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:8px}.tabs button{background:none;border:0;border-bottom:3px solid transparent;border-radius:0;color:var(--head-ink);opacity:.8;white-space:nowrap}.tabs button.on{border-color:var(--accent);opacity:1;font-weight:600}
+.demo{background:var(--warnbg);color:var(--warn);padding:6px 12px;border-radius:8px;margin:12px 0;font-size:.85rem}
+main{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-top:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.cnt{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:2px}.cnt b{font:700 2rem var(--hf);font-variant-numeric:tabular-nums}.cnt span{color:var(--muted);font-size:.85rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.sp{justify-content:space-between;align-items:center}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px}table{border-collapse:collapse;width:100%;font-size:.88rem}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--bg);white-space:nowrap}tr.click{cursor:pointer}tr.click:hover td{background:var(--bg)}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.78rem;font-weight:600;white-space:nowrap}.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}.pill.info{background:var(--infobg);color:var(--info)}.pill.mu{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.panel{position:fixed;inset:0;background:#0009;z-index:20;display:flex;justify-content:flex-end}.sheet{background:var(--bg);width:min(640px,100%);height:100%;overflow:auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 40px 16px;display:flex;flex-direction:column;gap:12px}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.acts button{min-height:48px;font-weight:600}
+.tl{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}.tl li{border-left:3px solid var(--line);padding:2px 10px;font-size:.88rem}.tl small{color:var(--muted)}
+.msg{padding:10px 12px;border-radius:8px}.msg.ok{background:var(--okbg);color:var(--ok)}.msg.warn{background:var(--warnbg);color:var(--warn)}.msg.bad{background:var(--badbg);color:var(--bad)}.msg.info{background:var(--infobg);color:var(--info)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:760px){.two{grid-template-columns:1fr}}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:0;font-size:.82rem;max-height:340px;overflow:auto}
+mark{background:var(--warnbg);color:var(--warn);padding:0 2px;border-radius:3px}.muted{color:var(--muted)}.small{font-size:.82rem}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:in .18s ease-out}@keyframes in{from{transform:translateX(24px);opacity:.4}}}
+
+.login{max-width:380px;margin:12vh auto 0;display:flex;flex-direction:column;gap:12px}
+</style></head><body>
+<div id="boot" style="padding:40px;text-align:center">Chargement…</div>
+<div class="top" id="topbar" hidden><div class="bar"><div class="logo">CRM <b>C2e</b></div>
+<div class="row" style="align-items:center"><span id="me"></span><button id="bell" style="display:none"></button><button id="out" style="background:#ffffff14;color:inherit;border-color:#ffffff33">Se déconnecter</button></div></div>
+<div class="tabs" id="tabs"></div></div>
+<main><div id="app"></div></main><div id="modal"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+var SB=supabase.createClient('https://zjtpqcfhpezlqgaqybhe.supabase.co','sb_publishable_NlG9C9Xe_AWqVYAZxL4xaw_2AebMQC5');
+var $=function(s){return document.querySelector(s)};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function norm(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim()}
+function normPhone(p){if(p==null)return null;var s=String(p).replace(/[^0-9+]/g,'');if(!s)return null;if(s.indexOf('0033')===0)s='+'+s.slice(2);if(s.indexOf('+33')===0)return '0'+s.slice(3);if(s[0]==='+')return s;if(s.indexOf('33')===0&&s.length===11)return '0'+s.slice(2);return s}
+function normMail(m){m=String(m||'').trim().toLowerCase();return m||null}
+function validMail(m){return !!m&&/^[^\s@,]+@[^\s@,]+\.[a-z]{2,}$/.test(m)}
+var TZ='Europe/Paris';
+function fD(i){return i?new Date(String(i).length<=10?i+'T12:00:00':i).toLocaleDateString('fr-FR',{timeZone:TZ}):'date inconnue'}
+function fDT(i){return i?new Date(i).toLocaleString('fr-FR',{timeZone:TZ,dateStyle:'short',timeStyle:'short'}):''}
+function now(){return new Date().toISOString()}
+function day(n){var d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+var STAGES={recu:'Reçu',a_contacter:'À contacter',contact_etabli:'Contact établi',rdv_pris:'RDV pris',devis_a_faire:'Devis à faire',devis_realise:'Devis réalisé',vente_faite:'Vente faite',cloture_sans_vente:'Clôturé sans vente'};
+var RESULTS={pas_de_reponse:'Pas de réponse',a_rappeler:'À rappeler',pas_interesse:'Pas intéressé',trop_loin:'Trop loin',injoignable:'Injoignable',faux_numero:'Faux numéro',trop_tard:'Trop tard',emploi_formation:'Demande emploi ou formation',autre:'Autre'};
+var QUAL={a_verifier:'À vérifier',valide:'Validé',doublon:'Doublon',spam:'Spam confirmé'};
+var ROLES={admin:'Administrateur',secretariat:'Secrétariat',commercial:'Commercial'};
+var CLOSE_REASONS=['pas_interesse','trop_loin','faux_numero','injoignable','trop_tard','emploi_formation','autre'];
+var ERR={FORBIDDEN:'Action non autorisée pour votre compte.',REQUEST_CLOSED:'Ce dossier est clôturé.',CONFLICT:'Ce dossier a été modifié par quelqu\'un d\'autre. Rechargez : vos changements ne sont pas enregistrés.',INCOMPLETE_CONTACT:'Dossier incomplet : il faut un nom et un moyen de contact (un administrateur peut déroger avec un motif).',TARGET_NOT_ACTIVE_SALESPERSON:'Le destinataire doit être un commercial actif.',DUE_REQUIRED:'Un rappel exige une échéance.',DATE_AND_TIME_REQUIRED:'Un rendez-vous exige une date et une heure, ou « heure à préciser ».',SALE_DATE_REQUIRED:'Une vente exige au moins une date.',VAT_MODE_REQUIRED:'Précisez HT ou TTC pour le montant.',REASON_REQUIRED:'Un motif est obligatoire.',NO_AUTH_ACCOUNT:'Aucun compte de connexion avec cet email : créez-le d\'abord dans Supabase › Authentication › Users.',NAME_REQUIRED:'Le nom est obligatoire.',CANNOT_CHANGE_OWN_ROLE:'Vous ne pouvez pas changer votre propre rôle.',CANNOT_DEACTIVATE_SELF:'Vous ne pouvez pas désactiver votre propre compte.'};
+function errMsg(e){var m=(e&&e.message)||String(e);for(var k in ERR)if(m.indexOf(k)>-1)return ERR[k];return 'Erreur : '+m}
+var S={works:[],sources:[]},D={profiles:[],reqs:[],tasks:[]},ME=null,ui={view:'home',f:{},page:0,sel:{},open:null,form:null,add:null,toast:null,imp:null,acts:[],busy:false};
+
+function parseMail(txt){var P={},al=[],lines=txt.replace(/\r/g,'').split('\n'),masked=false;
+  var clean=lines.map(function(l){var m=l.replace(/https?:\/\/\S*(token|jwt|access_token|key)=\S*/gi,function(){masked=true;return '[lien masqué]'});return m});
+  function set(k,v,l){if(v!=null&&String(v).trim()!==''&&!P[k])P[k]={v:String(v).trim(),from:l}}
+  clean.forEach(function(l){var t=l.trim(),m;if(!t)return;
+    if(m=t.match(/^nom du formulaire\s*[:\-]?\s*(.+)$/i))return set('form',m[1],t);
+    if(m=t.match(/^(?:nom)\s*[:\-]?\s*(.+)$/i)&&t.match(/^nom\b(?!\s+du)/i)&&t.match(/^nom\s*[:\-]?\s*(.+)$/i))set('nom',t.match(/^nom\s*[:\-]?\s*(.+)$/i)[1],t);
+    if(m=t.match(/^pr[ée]nom\s*[:\-]?\s*(.+)$/i))set('prenom',m[1],t);
+    if(m=t.match(/^(?:t[ée]l[ée]phone|t[ée]l\.?)\s*[:\-]?\s*(\+?[\d .\-]{8,})/i))set('tel',m[1],t);
+    if(m=t.match(/^(?:adresse\s*e[\s\-]?mail(?:\s*\d+)?|e-?mail)\s*[:\-]?\s*(\S+@\S+)/i)){if(!/webflow|no-?reply/i.test(m[1]))set('mail',m[1],t)}
+    if(m=t.match(/^code\s*postal\s*[:\-]?\s*(\d{5})/i))set('cp',m[1],t);
+    if(m=t.match(/^ville\s*[:\-]?\s*(.+)$/i))set('ville',m[1],t);
+    if(m=t.match(/^9\s*H\s*12\s*H\s*\d*\s*[:\-]?\s*(true|false)/i))set('am',m[1].toLowerCase(),t);
+    if(m=t.match(/^14\s*H\s*18\s*H\s*\d*\s*[:\-]?\s*(true|false)/i))set('pm',m[1].toLowerCase(),t);
+    if(m=t.match(/^budget\s*[:\-]?\s*(.+)$/i))set('budget',m[1],t);
+    if(m=t.match(/^campagne\s*[:\-]?\s*(.+)$/i))set('campagne',m[1],t);
+    if(m=t.match(/^(?:type de travaux|travaux|projet)\s*[:\-]?\s*(.+)$/i))set('travaux',m[1],t)});
+  var dual=/dualsun/i.test(txt);var works=[];
+  var travSrc=P.travaux?[P.travaux.v]:clean.filter(function(l){return /\btrue\b/i.test(l)&&!/^\d+\s*H/i.test(l.trim())}).map(function(l){return l.replace(/\s*true/i,'')});
+  travSrc.forEach(function(s){S.works.forEach(function(w){var a=norm(w),b=norm(s);if(b.indexOf(a)>-1||(a==='photovoltaique'&&/photovolta|pv\b|panneaux/.test(b)))if(works.indexOf(w)<0)works.push(w)})});
+  var allTrue=clean.filter(function(l){return /\btrue\s*$/i.test(l.trim())&&!/^\d+\s*H/i.test(l.trim())}).length>=3;
+  var src=P.form?P.form.v:(dual?'Leads Dualsun':''),srcOk=S.sources.filter(function(s){return norm(s)===norm(src)})[0];
+  var mail=P.mail?P.mail.v:'';if(mail&&!validMail(normMail(mail))){if(/,/.test(mail.split('@')[1]||'')){al.push('Adresse email douteuse : « '+mail+' ». Correction proposée : « '+mail.replace(/,/g,'.')+' » (à valider par vous).');P.mailfix=mail.replace(/,/g,'.')}else al.push('Adresse email invalide : à corriger.')}
+  if(!P.nom&&!P.prenom&&!P.tel&&!mail)al.push('Demande à vérifier : identité et coordonnées vides.');
+  if(allTrue){al.push('Tous les choix de travaux sont cochés : demande à vérifier (pas de conclusion de spam, aucun travail sélectionné automatiquement).');works=[]}
+  if(dual&&P.nom&&P.prenom)al.push('DualSun : nom et prénom peuvent être inversés (« '+P.nom.v+' / '+P.prenom.v+' »). Conservés tels qu\'étiquetés : vérifiez.');
+  if(masked)al.push('Un lien de connexion a été masqué et retiré du texte conservé.');
+  if(/revenus|composition du foyer/i.test(txt))al.push('Des informations de revenus ou de foyer figurent dans le texte : non reprises dans les champs.');
+  if(P.form&&!srcOk)al.push('Source « '+P.form.v+' » inconnue du référentiel : à valider.');
+  var avail=[];if(P.am&&P.am.v==='true')avail.push('9 h–12 h');if(P.pm&&P.pm.v==='true')avail.push('14 h–18 h');
+  var safe=clean.join('\n').replace(/\n.*(revenus|composition du foyer).*/ig,'');
+  return{P:P,al:al,works:works,src:srcOk||'',srcLabel:src,avail:avail.join(' et '),safe:safe,fields:{name:[P.nom&&P.nom.v,P.prenom&&P.prenom.v].filter(Boolean).join(' '),phone:P.tel?P.tel.v:'',email:P.mailfix?'':mail,mailSuggest:P.mailfix||'',cp:P.cp?P.cp.v:'',city:P.ville?P.ville.v:'',budget:P.budget?P.budget.v:'',campaign:P.campagne?P.campagne.v:''}}}
+
+
+function toast(t,k){ui.toast={t:t,k:k||'ok'};render()}
+async function call(fn,args){var r=await SB.rpc(fn,args||{});if(r.error)throw r.error;return r.data}
+async function loadAll(){
+  var all=[],from=0;for(;;){var q=await SB.from('requests').select('*,contacts(*),sources(name),request_work_types(work_types(name))').order('id',{ascending:false}).range(from,from+999);if(q.error)throw q.error;all=all.concat(q.data);if(q.data.length<1000)break;from+=1000}
+  D.reqs=all.map(function(r){var c=r.contacts||{};r.name=c.display_name||'';r.phone=c.phone_raw||'';r.email=c.email_raw||'';r.city=c.city||'';r.cp=c.postal_code||'';r.address=c.address||'';r.source=(r.sources&&r.sources.name)||'';r.sourceOrig=r.source_label_original||r.source;r.works=(r.request_work_types||[]).map(function(x){return x.work_types.name});return r});
+  var t=await SB.from('tasks').select('*').eq('status','open');if(t.error)throw t.error;D.tasks=t.data;
+  var p=await SB.from('profiles').select('*').order('full_name');if(p.error)throw p.error;D.profiles=p.data;
+}
+function P(id){return D.profiles.filter(function(p){return p.id===id})[0]}
+function R(id){return D.reqs.filter(function(r){return r.id===id})[0]}
+function staff(){return ME.role!=='commercial'}
+function stagePill(r){var c={recu:'mu',a_contacter:'info',contact_etabli:'info',rdv_pris:'warn',devis_a_faire:'warn',devis_realise:'warn',vente_faite:'ok',cloture_sans_vente:'mu'}[r.stage];return '<span class="pill '+c+'">'+STAGES[r.stage]+'</span>'}
+function qualPill(r){if(r.quality==='valide')return '';return ' <span class="pill '+(r.quality==='a_verifier'?'warn':'bad')+'">'+QUAL[r.quality]+'</span>'}
+function opt(list,sel,all){return (all?'<option value="">'+all+'</option>':'')+list.map(function(x){var v=Array.isArray(x)?x[0]:x,l=Array.isArray(x)?x[1]:x;return '<option value="'+esc(v)+'"'+(v===sel?' selected':'')+'>'+esc(l)+'</option>'}).join('')}
+function comms(active){return D.profiles.filter(function(p){return p.role==='commercial'&&(!active||p.active)})}
+function openCount(id){return D.reqs.filter(function(r){return r.assigned_to===id&&r.stage!=='cloture_sans_vente'&&r.stage!=='vente_faite'}).length}
+function lateTasks(){var n=now();return D.tasks.filter(function(t){return t.kind!=='mail'&&t.due_at&&t.due_at<n})}
+function lateCount(id){return lateTasks().filter(function(t){var r=R(t.request_id);return r&&r.assigned_to===id}).length}
+function unassigned(r){var u=r.assigned_to&&P(r.assigned_to);return !r.archived&&['cloture_sans_vente','vente_faite'].indexOf(r.stage)<0&&['doublon','spam'].indexOf(r.quality)<0&&(!r.assigned_to||(u&&!u.active))}
+function untreated(r){return r.assigned_to&&!r.archived&&r.stage==='a_contacter'&&r.last_result==null&&['doublon','spam'].indexOf(r.quality)<0}
+
+/* ---------- Connexion ---------- */
+function showLogin(msg){$('#boot').hidden=true;$('#topbar').hidden=true;$('#modal').innerHTML='';
+  $('#app').innerHTML='<form class="login card" id="lf"><h2>CRM C2e</h2><p class="muted" style="margin:0">Application privée. Connectez-vous avec votre compte nominatif.</p>'+(msg?'<div class="msg bad">'+esc(msg)+'</div>':'')+'<label>Email<input id="lem" type="email" autocomplete="username" required></label><label>Mot de passe<input id="lpw" type="password" autocomplete="current-password" required></label><button class="p">Se connecter</button><button type="button" id="lforgot">Mot de passe oublié</button></form>'}
+document.addEventListener('submit',async function(e){if(e.target.id==='lf'){e.preventDefault();var r=await SB.auth.signInWithPassword({email:$('#lem').value.trim(),password:$('#lpw').value});if(r.error)showLogin('Email ou mot de passe incorrect.');else start()}});
+document.addEventListener('click',async function(e){if(e.target.id==='lforgot'){var em=$('#lem').value.trim();if(!em){showLogin('Saisissez d\'abord votre email.');return}await SB.auth.resetPasswordForEmail(em,{redirectTo:location.href.split('#')[0]});showLogin('Si ce compte existe, un email de réinitialisation vient d\'être envoyé.')}});
+async function start(){
+  var s=await SB.auth.getSession();if(!s.data.session){showLogin();return}
+  var me=await SB.from('profiles').select('*').eq('id',s.data.session.user.id).maybeSingle();
+  if(!me.data||!me.data.active){await SB.auth.signOut();showLogin(me.data?'Ce compte est désactivé.':'Ce compte n\'est pas encore activé : demandez à l\'administrateur.');return}
+  ME=me.data;
+  var w=await SB.from('work_types').select('name').eq('active',true).order('id'),so=await SB.from('sources').select('id,name').eq('active',true).order('id');
+  S.works=w.data.map(function(x){return x.name});S.sources=so.data.map(function(x){return x.name});S.srcId={};so.data.forEach(function(x){S.srcId[x.name]=x.id});
+  S.workId={};var wi=await SB.from('work_types').select('id,name');wi.data.forEach(function(x){S.workId[x.name]=x.id});
+  try{await loadAll()}catch(err){$('#app').innerHTML='<div class="msg bad">'+esc(errMsg(err))+'</div>';return}
+  $('#boot').hidden=true;$('#topbar').hidden=false;$('#me').textContent=ME.full_name+' · '+ROLES[ME.role];render()}
+async function refresh(){try{await loadAll()}catch(e){toast(errMsg(e),'bad');return}if(ui.open)await loadActs(ui.open);render()}
+async function loadActs(id){var a=await SB.from('activities').select('*').eq('request_id',id).order('id',{ascending:false});ui.acts=a.data||[]}
+
+/* ---------- Rendu ---------- */
+function tabsFor(){var t=[['home','Accueil']];if(staff()){t.push(['contacts','Contacts'],['add','Ajouter'],['assign','Attribution'],['stats','Pilotage']);if(ME.role==='admin')t.push(['team','Équipe'])}else t.push(['contacts','Mes dossiers'],['stats','Mes résultats']);return t}
+function render(){
+  if(tabsFor().map(function(t){return t[0]}).indexOf(ui.view)<0)ui.view='home';
+  $('#tabs').innerHTML=tabsFor().map(function(t){return '<button data-act="tab" data-v="'+t[0]+'" class="'+(ui.view===t[0]?'on':'')+'">'+t[1]+'</button>'}).join('');
+  var v={home:vHome,contacts:vContacts,add:vAdd,assign:vAssign,stats:vStats,team:vTeam}[ui.view];
+  $('#app').innerHTML=(ui.toast?'<div class="msg '+ui.toast.k+'" role="status">'+esc(ui.toast.t)+'</div>':'')+v();ui.toast=null;
+  if(ui.view==='contacts')fillTable();renderModal()}
+function counterBtn(n,label,ids){return '<button class="cnt" data-act="goto" data-ids=\''+JSON.stringify(ids)+'\'><b>'+n+'</b><span>'+label+'</span></button>'}
+function vHome(){
+  if(!staff())return vHomeCom();
+  var all=D.reqs.filter(function(r){return !r.archived}),f=function(fn){return all.filter(fn).map(function(r){return r.id})};
+  var rec=f(function(r){return (r.created_at||'')>=day(-30)}),un=f(unassigned),ver=f(function(r){return r.quality==='a_verifier'}),nt=f(untreated);
+  var late=lateTasks().map(function(t){return t.request_id}).filter(function(v,i,a){return a.indexOf(v)===i});
+  var rea=D.reqs.filter(function(r){var u=r.assigned_to&&P(r.assigned_to);return u&&!u.active&&['cloture_sans_vente','vente_faite'].indexOf(r.stage)<0}).length;
+  return '<h2>Accueil</h2><div class="grid">'+counterBtn(rec.length,'Contacts reçus (30 jours)',rec)+counterBtn(un.length,'Non attribués',un)+counterBtn(ver.length,'À vérifier',ver)+counterBtn(nt.length,'Non traités',nt)+counterBtn(late.length,'Actions en retard',late)+'</div>'+(rea?'<div class="msg warn">'+rea+' dossier(s) appartiennent à un commercial désactivé : à réattribuer (onglet Attribution).</div>':'')+(all.length?'':'<div class="card"><h3>Bienvenue</h3><p>Aucun dossier pour l\'instant. Commencez par l\'onglet <b>Ajouter</b> : collez le texte d\'un mail, ou saisissez un contact à la main. Créez ensuite les comptes de vos commerciaux dans l\'onglet <b>Équipe</b>.</p></div>')}
+function listCard(title,rows,empty){return '<div class="card"><h3>'+title+' <span class="pill mu">'+rows.length+'</span></h3>'+(rows.length?'<div class="tw"><table><tbody>'+rows.map(function(r){return '<tr class="click" data-act="open" data-id="'+r.id+'"><td><b>'+esc(r.name||'(sans nom)')+'</b><br><span class="muted small">'+esc(r.city)+' · '+esc(r.works.join(', '))+'</span></td><td>'+stagePill(r)+'</td><td class="small">'+esc(r.hint||'')+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">'+empty+'</p>')+'</div>'}
+function vHomeCom(){var mine=D.reqs.filter(function(r){return !r.archived}),n=function(r,h){r.hint=h;return r},nowI=now();
+  var news=mine.filter(untreated).map(function(r){return n(r,'Attribué le '+fD(r.assigned_at))}),today=[],late=[],mails=[];
+  D.tasks.forEach(function(t){var r=R(t.request_id);if(!r)return;if(t.kind==='mail')mails.push(n(r,'✉️ Envoyer mail (3 appels sans réponse)'));else if(t.due_at<nowI)late.push(n(r,'Échéance '+fDT(t.due_at)));else if(t.due_at.slice(0,10)===day(0))today.push(n(r,fDT(t.due_at)))});
+  var rd=mine.filter(function(r){return r.stage==='rdv_pris'}).map(function(r){return n(r,'RDV '+fD(r.rdv_on)+' '+(r.rdv_time?r.rdv_time.slice(0,5):'(heure à préciser)'))}),dv=mine.filter(function(r){return r.stage==='devis_a_faire'}).map(function(r){return n(r,'Devis à faire')});
+  return '<h2>Bonjour '+esc(ME.full_name.split(' ')[0])+'</h2>'+(mails.length?listCard('Relances par mail à envoyer',mails,''):'')+listCard('Mes nouveaux contacts',news,'Aucun nouveau contact.')+listCard('À rappeler aujourd\'hui',today,'Rien à rappeler aujourd\'hui.')+listCard('En retard',late,'Aucun retard.')+listCard('Mes rendez-vous',rd,'Aucun rendez-vous.')+listCard('Mes devis à faire',dv,'Aucun devis à faire.')}
+function filtered(){var f=ui.f,q=norm(f.q);return D.reqs.filter(function(r){if(r.archived)return false;if(f.ids&&f.ids.indexOf(r.id)<0)return false;if(f.source&&r.source!==f.source)return false;if(f.stage&&r.stage!==f.stage)return false;if(f.com&&(f.com==='-'?r.assigned_to:r.assigned_to!==f.com))return false;if(f.work&&r.works.indexOf(f.work)<0)return false;
+  if(q){var hay=norm(r.name+' '+r.email+' '+r.city)+' '+(normPhone(r.phone)||'');var qp=normPhone(f.q);if(hay.indexOf(q)<0&&!(qp&&qp.length>3&&hay.indexOf(qp)>-1))return false}return true})}
+function vContacts(){var f=ui.f;
+  return '<div class="row sp"><h2>'+(staff()?'Contacts':'Mes dossiers')+'</h2>'+(staff()?'<button data-act="export">Exporter la liste filtrée (CSV)</button>':'')+'</div>'+(f.ids?'<div class="msg info">Liste limitée à '+f.ids.length+' dossier(s). <button data-act="clearids">Voir tout</button></div>':'')+
+  '<div class="card"><div class="row"><label>Recherche (nom, téléphone, email)<input id="fq" value="'+esc(f.q||'')+'" style="min-width:230px"></label><label>Source<select id="fs">'+opt(S.sources,f.source,'Toutes')+'</select></label><label>Étape<select id="fe">'+opt(Object.keys(STAGES).map(function(k){return [k,STAGES[k]]}),f.stage,'Toutes')+'</select></label><label>Travaux<select id="fw">'+opt(S.works,f.work,'Tous')+'</select></label>'+(staff()?'<label>Commercial<select id="fc">'+opt([['-','Non attribué']].concat(comms().map(function(u){return [u.id,u.full_name]})),f.com,'Tous')+'</select></label>':'')+'<button data-act="resetf">Effacer les filtres</button></div></div><div id="tbl"></div><div id="exp"></div>'}
+function lastContact(r){return r.last_result?RESULTS[r.last_result]:'—'}
+function fillTable(){var rows=filtered(),pg=15,pages=Math.max(1,Math.ceil(rows.length/pg));if(ui.page>=pages)ui.page=pages-1;var sl=rows.slice(ui.page*pg,ui.page*pg+pg);
+  $('#tbl').innerHTML='<div class="tw"><table><thead><tr><th>Nom</th><th>Ville</th><th>Source</th><th>Travaux</th><th>Commercial</th><th>Étape</th><th>Dernier résultat</th><th>Prochaine action</th></tr></thead><tbody>'+(sl.map(function(r){var t=D.tasks.filter(function(x){return x.request_id===r.id})[0],u=r.assigned_to&&P(r.assigned_to);return '<tr class="click" data-act="open" data-id="'+r.id+'"><td><b>'+esc(r.name||'(sans nom)')+'</b>'+qualPill(r)+'</td><td>'+esc(r.city)+'</td><td class="small">'+esc(r.source)+'</td><td class="small">'+esc(r.works.join(', '))+'</td><td>'+(u?esc(u.full_name)+(u.active?'':' <span class="pill bad">désactivé</span>'):(staff()?'<span class="pill warn">Non attribué</span>':''))+'</td><td>'+stagePill(r)+'</td><td>'+lastContact(r)+'</td><td class="small">'+(t?({call:'Appeler',callback:'Rappeler',mail:'Envoyer mail',quote:'Devis',quote_followup:'Relancer devis'}[t.kind])+' · '+fD(t.due_at):'—')+'</td></tr>'}).join('')||'<tr><td colspan="8" class="muted">Aucun dossier ne correspond.</td></tr>')+'</tbody></table></div><div class="row sp" style="margin-top:8px"><span class="muted small">'+rows.length+' dossier(s) · page '+(ui.page+1)+'/'+pages+'</span><span class="row"><button data-act="pg" data-d="-1"'+(ui.page?'':' disabled')+'>Précédent</button><button data-act="pg" data-d="1"'+(ui.page<pages-1?'':' disabled')+'>Suivant</button></span></div>'}
+function csvCell(v){v=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
+async function exportCsv(){var rows=filtered(),h=['Nom','Téléphone','Email','Ville','Source','Travaux','Commercial','Étape','Qualité'];
+  var out=h.map(csvCell).join(';')+'\n'+rows.map(function(r){var u=P(r.assigned_to);return [r.name,r.phone,r.email,r.city,r.source,r.works.join(' / '),u?u.full_name:'',STAGES[r.stage],QUAL[r.quality]].map(csvCell).join(';')}).join('\n');
+  await SB.rpc('log_export',{p_scope:rows.length+' dossiers'}).then(function(){},function(){});
+  $('#exp').innerHTML='<div class="card" style="margin-top:12px"><h3>Export CSV ('+rows.length+' lignes, généré le '+fDT(now())+')</h3><p class="muted small">Copiez le texte puis collez-le dans Excel ou un fichier .csv. Les cellules commençant par = + - @ sont protégées contre l\'interprétation comme formule.</p><textarea id="csvt" readonly>'+esc(out)+'</textarea><button data-act="copycsv">Copier</button></div>'}
+
+/* ---------- Fiche ---------- */
+async function openReq(id){ui.open=id;ui.form=null;await loadActs(id);render()}
+function evLabel(e){var d=e.data||{};return {no_answer:'📵 Appel sans réponse',contact:'✅ Contact établi',callback:'⏰ Rappel prévu le '+fDT(d.due),appointment:'📅 RDV le '+fD(d.date)+' '+(d.time?d.time.slice(0,5):'(heure à préciser)'),quote:'📄 Devis réalisé'+(d.ref?' ('+esc(d.ref)+')':''),sale:'💶 Vente le '+fD(d.date)+(d.amount?' · '+Number(d.amount).toLocaleString('fr-FR')+' € '+d.vat:' · montant non renseigné'),close:'Clôturé : '+esc(RESULTS[d.reason]||''),reopen:'Dossier rouvert',note:'Note',mail:'✉️ Mail'}[e.type]||e.type}
+var MAILTPL={subject:'Votre demande de travaux',body:'Bonjour {prenom_ou_nom},\n\nNous revenons vers vous au sujet de votre demande. Nous avons essayé de vous joindre par téléphone.\nVous pouvez répondre à ce message en nous indiquant un créneau pour vous rappeler.\n\nCordialement,\n{commercial}'};
+function renderMail(r){var cm=P(r.assigned_to)||{full_name:''};var b=MAILTPL.body.replace(/\{prenom_ou_nom\}/g,r.name||'').replace(/\{commercial\}/g,cm.full_name).replace(/Bonjour ,/,'Bonjour,').replace(/\{[a-z_]+\}/g,'');return{subject:MAILTPL.subject,body:b}}
+function mailBlock(r){if(r.stage==='cloture_sans_vente')return 'Dossier clôturé';if(r.quality==='doublon'||r.quality==='spam')return 'Dossier marqué doublon ou spam';if(r.opt_out)return 'Opposition au contact enregistrée';if(['rdv_pris','devis_a_faire','devis_realise','vente_faite'].indexOf(r.stage)>-1)return 'Un rendez-vous a été pris';if(!validMail(normMail(r.email)))return 'Email manquant ou à corriger';return ''}
+function counters(){var n=0,tot=0,seen=false;ui.acts.slice().reverse().forEach(function(a){if(a.type==='contact')n=0;else if(a.type==='no_answer'){n++;tot++}});return{n:n,tot:tot}}
+function formHtml(r){var k=ui.form;
+  if(k==='callback')return '<div class="row" style="margin-top:10px"><label>Échéance (obligatoire)<input type="datetime-local" id="f_due"></label><button class="p" data-act="saveform" data-k="callback" data-id="'+r.id+'">Enregistrer le rappel</button></div>';
+  if(k==='rdv')return '<div class="row" style="margin-top:10px"><label>Date<input type="date" id="f_date"></label><label>Heure<input type="time" id="f_time"></label><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="f_tbd" style="min-height:0"> Heure à préciser</label><button class="p" data-act="saveform" data-k="rdv" data-id="'+r.id+'">Enregistrer le RDV</button></div>';
+  if(k==='vente')return '<div class="row" style="margin-top:10px"><label>Date de vente<input type="date" id="f_date" value="'+day(0)+'"></label><label>Montant (facultatif, EUR)<input type="number" id="f_amt" min="0"></label><label>HT ou TTC<select id="f_ttc"><option>HT</option><option>TTC</option></select></label><button class="p" data-act="saveform" data-k="vente" data-id="'+r.id+'">Enregistrer la vente</button></div>';
+  if(k==='devis')return '<div class="row" style="margin-top:10px"><label>Référence du devis (facultatif)<input id="f_ref"></label><button class="p" data-act="saveform" data-k="devis" data-id="'+r.id+'">Enregistrer le devis</button></div>';return ''}
+function renderModal(){var el=$('#modal');if(!ui.open){el.innerHTML='';return}var r=R(ui.open);if(!r){el.innerHTML='';ui.open=null;return}
+  var st=counters(),u=P(r.assigned_to),mb=mailBlock(r),mt=D.tasks.filter(function(t){return t.request_id===r.id&&t.kind==='mail'})[0],closed=r.stage==='cloture_sans_vente';
+  var h='<div class="panel" data-act="closepanel"><div class="sheet" role="dialog" aria-label="Fiche dossier"><div class="row sp"><h2>'+esc(r.name||'(sans nom)')+' <span class="muted small">n°'+r.id+'</span></h2><button data-act="close">Fermer ✕</button></div><div>'+stagePill(r)+qualPill(r)+(r.last_result?' <span class="pill mu">'+esc(RESULTS[r.last_result])+'</span>':'')+'</div>';
+  h+='<div class="card"><div class="two"><div><div class="muted small">Téléphone</div><b>'+(r.phone?esc(r.phone):'—')+'</b> '+(r.phone?'<a href="tel:'+esc(normPhone(r.phone))+'">Appeler</a>':'')+'<div class="muted small">Un clic ne prouve pas qu\'un appel a eu lieu : enregistrez le résultat ci-dessous.</div></div><div><div class="muted small">Email</div><b>'+(r.email?esc(r.email):'—')+'</b>'+(r.email&&!validMail(normMail(r.email))?' <span class="pill bad">à corriger</span>':'')+'</div></div><p style="margin:10px 0 0"><span class="muted small">Projet</span><br>'+esc(r.works.join(', ')||'Non précisé')+(r.description?' — '+esc(r.description):'')+'</p><p class="small muted" style="margin:6px 0 0">'+esc([r.address,r.cp,r.city].filter(Boolean).join(' '))+' · Source : '+esc(r.sourceOrig||'inconnue')+' · Reçu le '+fD(r.received_on)+(r.availability?' · Disponibilités : '+esc(r.availability):'')+'</p><p style="margin:8px 0 0">Responsable : <b>'+(u?esc(u.full_name):'non attribué')+'</b>'+(u&&!u.active?' <span class="pill bad">désactivé</span>':'')+'</p></div>';
+  if(!closed&&r.stage!=='vente_faite'&&r.assigned_to){h+='<div class="card"><h3>Appels : '+(st.n?'<span class="pill '+(st.n>=3?'bad':'warn')+'">'+st.n+' appel'+(st.n>1?'s':'')+' sans réponse</span>':'<span class="pill mu">aucun appel sans réponse en cours</span>')+' <span class="muted small">total historique : '+st.tot+'</span></h3><div class="acts" style="margin-top:10px"><button data-act="noans" data-id="'+r.id+'" class="p">📵 Appel sans réponse</button><button data-act="contact" data-id="'+r.id+'">✅ Contact établi</button><button data-act="form" data-k="callback">⏰ Programmer un rappel</button><button data-act="form" data-k="rdv">📅 Prendre un RDV</button><button data-act="form" data-k="devis">📄 Devis réalisé</button><button data-act="form" data-k="vente">💶 Vente faite</button></div>'+formHtml(r)+'</div>'}
+  if(!closed&&r.stage!=='vente_faite'&&!r.assigned_to)h+='<div class="msg info">Dossier non attribué : attribuez-le à un commercial pour enregistrer des appels.</div>';
+  if(mt&&!closed){h+='<div class="card"><h3>✉️ Action : envoyer un mail (3 appels sans réponse)</h3>';if(mb)h+='<div class="msg warn">'+esc(mb)+'. Le dossier reste accessible et le traitement par téléphone reste possible.</div>';else{var ml=renderMail(r);h+='<p class="small">À : <b>'+esc(r.email)+'</b><br>Objet : <b>'+esc(ml.subject)+'</b></p><pre>'+esc(ml.body)+'</pre><div class="msg info">Envoi non configuré : aucun mail ne part depuis cette application pour l\'instant. Relisez-le et envoyez-le depuis votre messagerie ; aucun envoi n\'est simulé comme réussi.</div>'}h+='</div>'}
+  if(staff()){h+='<div class="card"><h3>Gestion</h3><div class="row"><label>Attribuer à<select id="reas">'+opt(comms(true).map(function(x){return [x.id,x.full_name+' ('+openCount(x.id)+' ouverts, '+lateCount(x.id)+' en retard)']}),r.assigned_to,'— choisir —')+'</select></label><button data-act="reassign" data-id="'+r.id+'">Attribuer</button><label>Qualité<select id="qual">'+opt(Object.keys(QUAL).map(function(k){return [k,QUAL[k]]}),r.quality,'')+'</select></label><button data-act="setq" data-id="'+r.id+'">Appliquer</button></div><div class="row" style="margin-top:8px">'+(closed&&ME.role==='admin'?'<label>Motif de réouverture<input id="reomot"></label><button data-act="reopen" data-id="'+r.id+'">Rouvrir</button>':'')+'<button data-act="optout" data-id="'+r.id+'">'+(r.opt_out?'Retirer l\'opposition au contact':'Enregistrer une opposition au contact')+'</button></div></div>'}
+  if(!closed&&r.stage!=='vente_faite'){h+='<div class="card"><h3>Clôturer</h3><div class="row"><label>Motif<select id="cmot">'+opt(CLOSE_REASONS.map(function(k){return [k,RESULTS[k]]}),'','— choisir —')+'</select></label><button class="danger" data-act="closeask" data-id="'+r.id+'">Clôturer</button></div>'+(ui.confirmClose===r.id?'<div class="msg warn" style="margin-top:8px">Confirmer la clôture ? Les relances en attente seront annulées. <button data-act="closeyes" data-id="'+r.id+'" class="danger">Oui, clôturer</button></div>':'')+'</div>'}
+  h+='<div class="card"><h3>Coordonnées (version '+r.version+')</h3><div class="two"><label>Nom<input id="e_name" value="'+esc(r.name)+'"></label><label>Téléphone<input id="e_phone" value="'+esc(r.phone)+'"></label><label>Email<input id="e_email" value="'+esc(r.email)+'"></label><label>Ville<input id="e_city" value="'+esc(r.city)+'"></label></div><div class="row" style="margin-top:8px"><button data-act="saveinfo" data-id="'+r.id+'" data-v="'+r.version+'">Enregistrer</button></div></div>';
+  if(r.raw_text)h+='<div class="card"><h3>Texte reçu</h3><pre>'+esc(r.raw_text)+'</pre></div>';
+  h+='<div class="card"><h3>Historique</h3><ul class="tl">'+(ui.acts.map(function(e){var by=P(e.author);return '<li><b>'+evLabel(e)+'</b> <small>'+fDT(e.at)+' · '+esc(by?by.full_name:'')+'</small>'+(e.note?'<br><span class="small">'+esc(e.note)+'</span>':'')+'</li>'}).join('')||'<li class="muted">Aucun événement.</li>')+'</ul></div></div></div>';
+  var prev=el.querySelector('.sheet'),s0=prev?prev.scrollTop:0;el.innerHTML=h;var sh=el.querySelector('.sheet');if(sh)sh.scrollTop=s0}
+
+/* ---------- Ajouter ---------- */
+var SAMPLES={'Exemple : formulaire du site':'Nom du formulaire: Formulaire estimation de votre projet sur le site\nNom Dubois\nPrénom Laura\nTéléphone 06 12 34 56 78\nAdresse e-mail laura.dubois@exemple.test\nCode Postal 31200\nVille Toulouse\nType de travaux PAC air/eau\n9 H 12 H 2 true\n14 H 18 H 2 false'};
+function vAdd(){var a=ui.add||(ui.add={mode:'paste',txt:'',res:null});
+  var h='<h2>Ajouter des contacts</h2><div class="row"><button data-act="addmode" data-m="paste" class="'+(a.mode==='paste'?'p':'')+'">Coller un texte</button><button data-act="addmode" data-m="manual" class="'+(a.mode==='manual'?'p':'')+'">Saisir à la main</button></div>';
+  if(a.mode==='manual'&&!a.res)a.res={manual:true,P:{},al:[],works:[],src:'',srcLabel:'',avail:'',safe:'',fields:{name:'',phone:'',email:'',mailSuggest:'',cp:'',city:'',budget:'',campaign:''}};
+  if(a.mode==='paste')h+='<div class="card"><label>Collez ici le texte du mail entier<textarea id="paste" placeholder="Texte du mail…">'+esc(a.txt)+'</textarea></label><div class="row" style="margin-top:8px"><button class="p" data-act="parse">Extraire les informations</button>'+Object.keys(SAMPLES).map(function(k){return '<button data-act="sample" data-k="'+esc(k)+'">'+esc(k)+'</button>'}).join('')+'</div></div>';
+  if(a.res)h+=vPreview(a);return h}
+function pass(x,a,b){var p=x.P||{},t=[p[a]&&p[a].from,b&&p[b]&&p[b].from].filter(Boolean);return t.length?'<span class="small" style="color:var(--info)">passage utilisé : '+esc(t.join(' | '))+'</span>':''}
+function hilite(t,x){var used=[];Object.keys(x.P||{}).forEach(function(k){used.push(x.P[k].from)});return esc(x.safe||t).split('\n').map(function(l){return used.indexOf(l.trim())>-1?'<mark>'+l+'</mark>':l}).join('\n')}
+function vPreview(a){var x=a.res,f=x.fields,h='';
+  h+='<div class="'+(x.manual?'':'two')+'">'+(x.manual?'':'<div class="card"><h3>Texte original</h3><pre>'+hilite(a.txt,x)+'</pre></div>');
+  h+='<div class="card"><h3>Fiche proposée'+(x.manual?'':' (modifiable)')+'</h3>'+x.al.map(function(t){return '<div class="msg warn" style="margin-bottom:6px">⚠ '+esc(t)+'</div>'}).join('')+'<div class="two"><label>Nom d\'affichage'+pass(x,'nom','prenom')+'<input id="p_name" value="'+esc(f.name)+'"></label><label>Téléphone'+pass(x,'tel')+'<input id="p_phone" value="'+esc(f.phone)+'"></label><label>Email'+pass(x,'mail')+'<input id="p_email" value="'+esc(f.email)+'">'+(f.mailSuggest?'<span class="small">Suggestion : '+esc(f.mailSuggest)+' <button data-act="usefix">Utiliser</button></span>':'')+'</label><label>Ville'+pass(x,'ville')+'<input id="p_city" value="'+esc(f.city)+'"></label><label>Code postal<input id="p_cp" value="'+esc(f.cp)+'"></label><label>Source (référentiel)<select id="p_src">'+opt(S.sources,x.src,'— à choisir —')+'</select>'+(x.srcLabel?'<span class="small">Libellé reçu : '+esc(x.srcLabel)+'</span>':'')+'</label></div><label style="margin-top:8px">Types de travaux (indépendants de la source)<select id="p_works" multiple size="5">'+S.works.map(function(w){return '<option'+(x.works.indexOf(w)>-1?' selected':'')+'>'+esc(w)+'</option>'}).join('')+'</select></label>'+(x.avail?'<p class="small">Disponibilités : '+esc(x.avail)+'</p>':'')+'</div></div>';
+  var d=a.dups||[];
+  if(d.length)h+='<div class="card"><div class="msg warn">Doublon possible (même téléphone ou email) :</div>'+d.map(function(r){return '<p class="row" style="margin:8px 0"><span><b>'+esc(r.name||'(sans nom)')+'</b> · '+esc(r.works.join(', '))+' · '+STAGES[r.stage]+' <span class="muted small">(dossier n°'+r.id+')</span></span><button data-act="open" data-id="'+r.id+'">Ouvrir l\'existant</button></p>'}).join('')+'<div class="row"><label>Motif si conservé séparément<input id="p_motif" placeholder="ex. autre chantier"></label><button data-act="create" data-sep="1">Conserver séparément (autre projet)</button><button data-act="create" data-markdup="1">Enregistrer comme doublon</button></div></div>';
+  h+='<div class="row"><button data-act="checkdup">Vérifier les doublons</button>'+(d.length?'':'<button class="p" data-act="create">Enregistrer comme brouillon « Reçu » (non attribué)</button>')+'</div>';return h}
+async function findDups(phone,email){var p=normPhone(phone),e=normMail(email),ids={};var out=[];
+  if(p){var q=await SB.from('contacts').select('id').eq('phone_norm',p);(q.data||[]).forEach(function(c){ids[c.id]=1})}
+  if(e){var q2=await SB.from('contacts').select('id').eq('email_norm',e);(q2.data||[]).forEach(function(c){ids[c.id]=1})}
+  return D.reqs.filter(function(r){return ids[r.contact_id]})}
+function readPreview(){var a=ui.add;a.res.fields.name=$('#p_name').value;a.res.fields.phone=$('#p_phone').value;a.res.fields.email=$('#p_email').value;a.res.fields.city=$('#p_city').value;a.res.fields.cp=$('#p_cp').value;a.res.src=$('#p_src').value;a.res.works=[].slice.call($('#p_works').selectedOptions).map(function(o){return o.value})}
+async function createFromPreview(o){readPreview();var x=ui.add.res,f=x.fields;
+  var raw=x.safe||'',desc=o.sep&&$('#p_motif')?'Conservé séparément : '+$('#p_motif').value:null;
+  try{var id=await call('create_request',{p_display_name:f.name,p_phone:f.phone,p_email:f.email,p_source_id:S.srcId[x.src]||null,p_source_label:x.srcLabel||x.src||null,p_city:f.city,p_postal_code:f.cp,p_address:null,p_work_type_ids:x.works.map(function(w){return S.workId[w]}),p_description:desc,p_received_on:day(0),p_raw_text:raw});
+    if(o.markdup)await call('set_quality',{p_request:id,p_quality:'doublon'});
+    ui.add=null;await loadAll();ui.view='contacts';ui.f={ids:[id]};ui.page=0;toast('Dossier n°'+id+' enregistré en « Reçu », non attribué. Aucun appel, RDV ni mail n\'a été créé.')}catch(e){toast(errMsg(e),'bad')}}
+
+/* ---------- Attribution, pilotage, équipe ---------- */
+function vAssign(){var com=comms(true),rows=D.reqs.filter(unassigned),n=Object.keys(ui.sel).filter(function(k){return ui.sel[k]}).length;
+  return '<h2>Attribution</h2><div class="card"><h3>Charge des commerciaux actifs</h3>'+(com.length?'<div class="tw"><table><thead><tr><th>Commercial</th><th class="n">Dossiers ouverts</th><th class="n">Rappels en retard</th></tr></thead><tbody>'+com.map(function(u){return '<tr><td>'+esc(u.full_name)+'</td><td class="n">'+openCount(u.id)+'</td><td class="n">'+lateCount(u.id)+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">Aucun commercial actif. L\'administrateur les crée dans l\'onglet Équipe.</p>')+'</div><div class="card"><h3>Dossiers à attribuer ou à réattribuer <span class="pill mu">'+rows.length+'</span></h3>'+(rows.length?'<div class="tw"><table><thead><tr><th></th><th>Nom</th><th>Source</th><th>Travaux</th><th>Situation</th></tr></thead><tbody>'+rows.map(function(r){var u=r.assigned_to&&P(r.assigned_to),inc=(!r.phone&&!r.email)||!r.name;return '<tr><td><input type="checkbox" data-sel="'+r.id+'"'+(ui.sel[r.id]?' checked':'')+' aria-label="Choisir"></td><td><a href="#" data-act="open" data-id="'+r.id+'"><b>'+esc(r.name||'(sans nom)')+'</b></a></td><td class="small">'+esc(r.source)+'</td><td class="small">'+esc(r.works.join(', '))+'</td><td>'+(u?'<span class="pill bad">Commercial désactivé : '+esc(u.full_name)+'</span>':'<span class="pill warn">Non attribué</span>')+(inc?' <span class="pill bad">incomplet</span>':'')+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">Rien à attribuer.</p>')+'<div class="row" style="margin-top:10px"><label>Attribuer les '+n+' dossier(s) choisi(s) à<select id="atarget">'+opt(com.map(function(u){return [u.id,u.full_name+' ('+openCount(u.id)+' ouverts, '+lateCount(u.id)+' en retard)']}),'','— choisir un commercial —')+'</select></label><label>Dérogation (administrateur, si dossier incomplet)<input id="aover" placeholder="motif"'+(ME.role==='admin'?'':' disabled')+'></label><button class="p" data-act="doassign"'+(n?'':' disabled')+'>Attribuer</button></div></div>'}
+function vStats(){var f=ui.sf||(ui.sf={from:day(-45),to:day(0)}),rs=D.reqs.filter(function(r){return !r.archived});
+  var inP=function(d){d=(d||'').slice(0,10);return d>=f.from&&d<=f.to},coh=rs.filter(function(r){return inP(r.received_on||r.created_at)}),expl=coh.filter(function(r){return r.quality==='valide'}),exc=coh.filter(function(r){return r.quality==='doublon'||r.quality==='spam'});
+  var rdv=expl.filter(function(r){return r.rdv_on}),dev=expl.filter(function(r){return r.quote_ref!=null||['devis_realise','vente_faite'].indexOf(r.stage)>-1}),ven=expl.filter(function(r){return r.stage==='vente_faite'});
+  var pct=function(a,b){return b?Math.round(100*a/b)+' %':'<span class="muted">non calculable</span>'},L=function(l,t){return '<a href="#" data-act="goto" data-ids=\''+JSON.stringify(l.map(function(r){return r.id}))+'\'>'+t+'</a>'};
+  var sales=rs.filter(function(r){return r.sale_on}),amt=sales.filter(function(r){return r.sale_amount!=null}),ht=0,ttc=0;amt.forEach(function(r){if(r.sale_vat==='TTC')ttc+=+r.sale_amount;else ht+=+r.sale_amount});
+  var bySrc={};coh.forEach(function(r){var k=r.source||'(non renseignée)';(bySrc[k]=bySrc[k]||[]).push(r)});
+  return '<h2>'+(staff()?'Pilotage':'Mes résultats')+'</h2><div class="card"><div class="row"><label>Du<input type="date" id="sfrom" value="'+f.from+'"></label><label>Au<input type="date" id="sto" value="'+f.to+'"></label><span class="muted small">Cohorte = demandes reçues sur la période. Doublons et spam présentés à part.</span></div></div><div class="grid"><div class="cnt"><b>'+coh.length+'</b><span>'+L(coh,'Contacts reçus')+'</span></div><div class="cnt"><b>'+expl.length+'</b><span>'+L(expl,'Demandes exploitables (validées)')+'</span></div><div class="cnt"><b>'+exc.length+'</b><span>'+L(exc,'Doublons et spam')+'</span></div><div class="cnt"><b>'+rs.filter(unassigned).length+'</b><span>Non attribués</span></div><div class="cnt"><b>'+rs.filter(untreated).length+'</b><span>Non traités</span></div><div class="cnt"><b>'+lateTasks().length+'</b><span>Rappels en retard</span></div></div><div class="card"><h3>Cohorte « reçus sur la période »</h3><div class="grid"><div class="cnt"><b>'+rdv.length+'</b><span>'+L(rdv,'ont obtenu un RDV')+' · taux '+pct(rdv.length,expl.length)+'</span></div><div class="cnt"><b>'+dev.length+'</b><span>'+L(dev,'avec devis')+'</span></div><div class="cnt"><b>'+ven.length+'</b><span>'+L(ven,'ventes')+' · taux '+pct(ven.length,expl.length)+'</span></div></div><p class="small">Montant vendu : <b>'+ht.toLocaleString('fr-FR')+' € HT</b> et <b>'+ttc.toLocaleString('fr-FR')+' € TTC</b> ; '+(sales.length-amt.length)+' vente(s) sans montant (signalées).</p></div><div class="card"><h3>Comparaison des sources (cohorte)</h3><div class="tw"><table><thead><tr><th>Source</th><th class="n">Reçus</th><th class="n">RDV</th><th class="n">Ventes</th><th class="n">Taux RDV</th><th class="n">Taux vente</th></tr></thead><tbody>'+(Object.keys(bySrc).sort().map(function(k){var l=bySrc[k],ex=l.filter(function(r){return r.quality==='valide'}),a=ex.filter(function(r){return r.rdv_on}).length,c=ex.filter(function(r){return r.stage==='vente_faite'}).length;return '<tr><td class="small">'+esc(k)+'</td><td class="n">'+L(l,l.length)+'</td><td class="n">'+a+'</td><td class="n">'+c+'</td><td class="n">'+pct(a,ex.length)+'</td><td class="n">'+pct(c,ex.length)+'</td></tr>'}).join('')||'<tr><td colspan="6" class="muted">Aucune demande sur la période.</td></tr>')+'</tbody></table></div><p class="muted small">Pas de coût d\'acquisition ni de rentabilité : aucun coût n\'est saisi, donc rien n\'est inventé.</p></div>'}
+function vTeam(){return '<h2>Équipe</h2><div class="card"><h3>Comptes</h3><div class="tw"><table><thead><tr><th>Nom</th><th>Rôle</th><th>État</th><th></th></tr></thead><tbody>'+D.profiles.map(function(u){return '<tr><td>'+esc(u.full_name)+'</td><td><select data-role="'+u.id+'"'+(u.id===ME.id?' disabled':'')+'>'+Object.keys(ROLES).map(function(r){return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLES[r]+'</option>'}).join('')+'</select></td><td>'+(u.active?'<span class="pill ok">Actif</span>':'<span class="pill bad">Désactivé</span>')+'</td><td><button data-act="toggleu" data-id="'+u.id+'"'+(u.id===ME.id?' disabled':'')+'>'+(u.active?'Désactiver':'Réactiver')+'</button></td></tr>'}).join('')+'</tbody></table></div><p class="muted small">Désactiver un commercial bloque son accès tout de suite ; ses dossiers passent dans « à réattribuer ». L\'historique est conservé.</p></div><div class="card"><h3>Activer un nouveau compte</h3><ol class="small"><li>Dans Supabase › Authentication › Users › Add user, créez le compte (email + mot de passe, case « Auto Confirm User »).</li><li>Revenez ici et saisissez le même email :</li></ol><div class="row"><label>Email du compte<input id="np_email" type="email"></label><label>Nom affiché<input id="np_name"></label><label>Rôle<select id="np_role">'+Object.keys(ROLES).map(function(r){return '<option value="'+r+'">'+ROLES[r]+'</option>'}).join('')+'</select></label><button class="p" data-act="addprofile">Activer ce compte</button></div></div>'}
+
+/* ---------- Événements ---------- */
+async function act(fn,args,okMsg,after){if(ui.busy)return;ui.busy=true;try{var r=await call(fn,args);await loadAll();if(ui.open)await loadActs(ui.open);ui.form=null;toast(typeof okMsg==='function'?okMsg(r):okMsg,'ok')}catch(e){toast(errMsg(e),'bad')}finally{ui.busy=false}}
+document.addEventListener('click',async function(ev){var t=ev.target.closest('[data-act]');if(!t)return;var a=t.getAttribute('data-act'),id=+t.getAttribute('data-id');
+  if(a==='closepanel'){if(ev.target===t){ui.open=null;ui.form=null;render()}return}
+  ev.preventDefault();
+  if(a==='tab'){ui.view=t.getAttribute('data-v');ui.page=0;ui.f={};render()}
+  else if(a==='goto'){ui.f={ids:JSON.parse(t.getAttribute('data-ids'))};ui.view='contacts';ui.page=0;render()}
+  else if(a==='open')openReq(id);
+  else if(a==='close'){ui.open=null;ui.form=null;render()}
+  else if(a==='pg'){ui.page+=+t.getAttribute('data-d');fillTable()}
+  else if(a==='resetf'){ui.f={};ui.page=0;render()}
+  else if(a==='clearids'){delete ui.f.ids;render()}
+  else if(a==='export')exportCsv();
+  else if(a==='copycsv'){var ta=$('#csvt');ta.select();try{navigator.clipboard.writeText(ta.value).then(function(){toast('CSV copié.')},function(){})}catch(e){}}
+  else if(a==='noans')act('record_no_answer',{p_request:id,p_note:null,p_token:(crypto.randomUUID?crypto.randomUUID():String(Date.now()))},function(r){var x=r&&r[0]||r||{};return (x.consecutive||'?')+' appel(s) sans réponse enregistré(s)'+(x.mail_task_created?'. Action « Envoyer mail » créée.':'.')});
+  else if(a==='contact')act('record_contact',{p_request:id},'Contact établi : la séquence sans réponse est interrompue et la relance mail annulée.');
+  else if(a==='form'){ui.form=t.getAttribute('data-k');renderModal()}
+  else if(a==='saveform'){var k=t.getAttribute('data-k');
+    if(k==='callback'){var d=$('#f_due').value;if(!d)return toast('Un rappel exige une échéance.','bad');act('schedule_callback',{p_request:id,p_due:new Date(d).toISOString()},'Rappel enregistré.')}
+    if(k==='rdv'){var dd=$('#f_date').value,tm=$('#f_time').value,tbd=$('#f_tbd').checked;act('book_appointment',{p_request:id,p_date:dd||null,p_time:tbd?null:(tm||null),p_time_tbd:tbd},'RDV enregistré.')}
+    if(k==='devis')act('record_quote',{p_request:id,p_ref:$('#f_ref').value||null},'Devis enregistré. L\'étape « Devis réalisé » est conservée même après un appel sans réponse.');
+    if(k==='vente'){var am=$('#f_amt').value;act('record_sale',{p_request:id,p_date:$('#f_date').value||null,p_amount:am?+am:null,p_vat:am?$('#f_ttc').value:null},'Vente enregistrée.')}}
+  else if(a==='reassign'){var to=$('#reas').value;if(!to)return;act('assign_requests',{p_request_ids:[id],p_to:to,p_reason:null,p_override_reason:null},'Attribué. L\'ancien responsable perd l\'accès.')}
+  else if(a==='setq')act('set_quality',{p_request:id,p_quality:$('#qual').value},'Qualité mise à jour.');
+  else if(a==='optout'){var r0=R(id);act('set_opt_out',{p_request:id,p_value:!r0.opt_out},'Opposition mise à jour.')}
+  else if(a==='closeask'){if(!$('#cmot').value)return toast('Choisissez un motif de clôture.','bad');ui.cmot=$('#cmot').value;ui.confirmClose=id;renderModal();$('#cmot').value=ui.cmot}
+  else if(a==='closeyes'){var m=ui.cmot;ui.confirmClose=null;act('close_request',{p_request:id,p_reason:m,p_note:null},'Dossier clôturé ; relances annulées.')}
+  else if(a==='reopen')act('reopen_request',{p_request:id,p_reason:$('#reomot').value},'Dossier rouvert.');
+  else if(a==='saveinfo'){var patch={display_name:$('#e_name').value.trim(),phone_raw:$('#e_phone').value.trim(),email_raw:$('#e_email').value.trim(),city:$('#e_city').value.trim()};act('update_contact_info',{p_request_id:id,p_expected_version:+t.getAttribute('data-v'),p_patch:patch},'Coordonnées enregistrées.')}
+  else if(a==='addmode'){ui.add={mode:t.getAttribute('data-m'),txt:'',res:null};render()}
+  else if(a==='sample'){ui.add.txt=SAMPLES[t.getAttribute('data-k')];ui.add.res=parseMail(ui.add.txt);ui.add.dups=[];render()}
+  else if(a==='parse'){ui.add.txt=$('#paste').value;ui.add.res=parseMail(ui.add.txt);ui.add.dups=[];render()}
+  else if(a==='usefix'){ui.add.res.fields.email=ui.add.res.fields.mailSuggest;ui.add.res.fields.mailSuggest='';render()}
+  else if(a==='checkdup'){readPreview();ui.add.dups=await findDups(ui.add.res.fields.phone,ui.add.res.fields.email);toast(ui.add.dups.length?ui.add.dups.length+' dossier(s) existant(s) avec ce téléphone ou cet email.':'Aucun doublon trouvé.',ui.add.dups.length?'warn':'ok')}
+  else if(a==='create'){if(ui.busy)return;ui.busy=true;try{await createFromPreview({sep:t.getAttribute('data-sep'),markdup:t.getAttribute('data-markdup')})}finally{ui.busy=false}}
+  else if(a==='doassign'){var to2=$('#atarget').value,ids=Object.keys(ui.sel).filter(function(k){return ui.sel[k]}).map(Number),ov=$('#aover').value.trim();if(!to2)return toast('Choisissez un commercial actif.','bad');ui.sel={};act('assign_requests',{p_request_ids:ids,p_to:to2,p_reason:null,p_override_reason:ov||null},function(n){return n+' dossier(s) attribué(s).'})}
+  else if(a==='toggleu'){var u=P(id);act('admin_set_active',{p_user:id,p_active:!u.active},u.active?'Compte désactivé : accès bloqué, historique conservé.':'Compte réactivé.')}
+  else if(a==='addprofile')act('admin_create_profile',{p_email:$('#np_email').value,p_name:$('#np_name').value,p_role:$('#np_role').value},'Compte activé.')});
+document.addEventListener('change',function(e){var t=e.target,id=t.id;
+  if(id==='fs'||id==='fe'||id==='fw'||id==='fc'){ui.f[{fs:'source',fe:'stage',fw:'work',fc:'com'}[id]]=t.value;ui.page=0;fillTable();return}
+  if(t.hasAttribute('data-sel')){ui.sel[t.getAttribute('data-sel')]=t.checked;render();return}
+  if(t.hasAttribute('data-role')){act('admin_set_role',{p_user:t.getAttribute('data-role'),p_role:t.value},'Rôle modifié (journalisé).');return}
+  if(id==='sfrom'||id==='sto'){ui.sf[id==='sfrom'?'from':'to']=t.value;render()}});
+document.addEventListener('input',function(e){if(e.target.id==='fq'){ui.f.q=e.target.value;ui.page=0;fillTable()}});
+$('#out').addEventListener('click',async function(){await SB.auth.signOut();ME=null;D={profiles:[],reqs:[],tasks:[]};showLogin()});
+SB.auth.onAuthStateChange(function(ev){if(ev==='PASSWORD_RECOVERY'){$('#boot').hidden=true;$('#app').innerHTML='<form class="login card" id="pf"><h2>Nouveau mot de passe</h2><label>Mot de passe (12 caractères minimum)<input id="npw" type="password" minlength="12" required autocomplete="new-password"></label><button class="p">Enregistrer</button></form>'}});
+document.addEventListener('submit',async function(e){if(e.target.id==='pf'){e.preventDefault();var r=await SB.auth.updateUser({password:$('#npw').value});if(r.error)alert(r.error.message);else start()}});
+start();
+})();
+</script></body></html>
