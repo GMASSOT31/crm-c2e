@@ -6,12 +6,12 @@
 update public.profiles set active=true;
 set role authenticated;
 select th2.login(:'secr');
-select th2.expect_error(format('select public.set_zones(%L::uuid, array[''31''], array[]::text[])', :'ca'), 'FORBIDDEN');
+select th2.expect_error('select public.set_zone_label(''Commercial A Fictif'', array[''31''], array[]::text[])', 'FORBIDDEN');
 select th2.login(:'adm');
-select public.set_zones(:'ca', array['31','7600'], array['Colomiers']);
-select public.set_zones(:'cb', array['3120','32'], array['Saint-Orens']);
-select th2.expect_error(format('select public.set_zones(%L::uuid, array[''31''], array[]::text[])', :'cb'), 'ZONE_TAKEN');
-select th2.expect_error(format('select public.set_zones(%L::uuid, array[''ab''], array[]::text[])', :'cb'), 'BAD_ZONE');
+select public.set_zone_label('Commercial A Fictif', array['31','7600'], array['Colomiers']);
+select public.set_zone_label('Commercial B Fictif', array['3120','32'], array['Saint-Orens']);
+select th2.expect_error('select public.set_zone_label(''Commercial B Fictif'', array[''31''], array[]::text[])', 'ZONE_TAKEN');
+select th2.expect_error('select public.set_zone_label(''Commercial B Fictif'', array[''ab''], array[]::text[])', 'BAD_ZONE');
 select th2.login(:'secr');
 create temp table z as select
   public.create_request('Zone A','0611000001',null,1,null,'Toulouse','31500') a,
@@ -32,7 +32,7 @@ select th2.assert((select assigned_to from public.requests where id=(select g fr
 select th2.assert((select count(*) from public.tasks where request_id in (select a from z union select b from z)) = 0, 'aucune tâche créée');
 -- apply_zones sur des dossiers non attribués
 select th2.login(:'adm');
-select public.set_zones(:'ca', array['31','7600','75'], array['Colomiers']);
+select public.set_zone_label('Commercial A Fictif', array['31','7600','75'], array['Colomiers']);
 select th2.login(:'secr');
 select th2.assert((public.apply_zones())->>'assigned' = '1', 'apply_zones : le dossier 75001 est attribué');
 select th2.assert((select assigned_to from public.requests where id=(select c from z)) = :'ca'::uuid, '75001 -> A après ajout de zone');
