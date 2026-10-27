@@ -25,9 +25,12 @@ Reçus 8 ; exploitables validés 5 ; à vérifier 1 ; doublon 1 ; spam 1 ; non a
 ## Limites restantes
 - Aucun test sur de vrais téléphones ni avec de vrais comptes en ligne.
 - Retards : une échéance sans heure n'est gérée que pour les rappels créés avec la fonction « journée » (les anciens rappels ont une heure).
-- La simulation des zones ne distingue pas « aucune zone », « zone ambiguë » et « compte inactif ».
 - L'événement technique « Import historique » n'existe pas : la date d'import (`imported_at`) en tient lieu.
-- Fusion des doublons (QUA02) non réalisée : le cahier la déclare facultative ; la comparaison et la décision (garder distincts avec justification) restent à faire.
+- Fusion automatique de deux dossiers doublons non réalisée (facultative) : la comparaison, la décision (doublon confirmé ou gardés distincts avec justification), l'annulation et la trace sont faites (QUA02).
+- Alias de sources (Google, SolarEdge) non réalisés : à valider par le propriétaire avant de rapprocher des libellés.
+
+## Points ajoutés après le Lot 5
+QUA02 doublons et opposition bloquante (migration 15), ENT02 ajout et import (16), RAP01 devis, ventes, relances (17), ATT02 zones et KPI05 périodes (18), DAT03 noms et prénoms. Tests : lots 12 à 15 et `ui_mock.js`.
 
 ## À valider par le propriétaire
 1. Le chiffre d'affaires principal est en **HT** ; le TTC est affiché à côté, jamais additionné.
