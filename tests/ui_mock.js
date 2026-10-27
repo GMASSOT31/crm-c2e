@@ -13,6 +13,7 @@ window.__DB = {
  D.requests=[R({quality:'a_verifier',import_batch_id:1,imported_at:'2026-10-26T13:00:00Z'}),R({quality:'a_verifier',import_batch_id:1,imported_at:'2026-10-26T13:00:00Z',assigned_to:'x'}),
    R({quality:'valide',import_batch_id:1,imported_at:'2026-10-26T13:00:00Z',assigned_to:'x',stage:'rdv_pris',rdv_origin:'import'}),
    R({quality:'valide',received_on:'2026-10-20',received_precision:'jour',assigned_to:'x'}),R({quality:'valide',received_on:'2026-10-21',assigned_to:'y',stage:'vente_faite',sale_on:'2026-10-25',sale_amount:5000,sale_vat:'HT'}),R({quality:'a_verifier',alerts:['Adresse email douteuse']})];
+ var tm=new Date(Date.now()+864e5).toISOString().slice(0,10);D.requests.push(R({quality:'valide',received_on:'2026-10-22',assigned_to:'adm',stage:'rdv_pris',rdv_on:tm,rdv_time:'10:00:00',rdv_origin:'confirme',rdv_status:'planifie'}));D.tasks=[{id:1,request_id:4,kind:'callback',due_at:'2026-10-26T09:00:00Z',status:'open',all_day:false}];
  D.requests.forEach(function(r){r.contacts.email_raw=r.id===4?'a@exemple.test':''; if(r.id===6)r.contacts.phone_raw='';});
  function q(t){var f=[],lim=null;var o={select:function(){return o},eq:function(c,v){f.push([c,v]);return o},order:function(){return o},range:function(a,b){return o},
   maybeSingle:function(){return Promise.resolve({data:(window.__DB[t]||[]).filter(function(r){return f.every(function(x){return r[x[0]]===x[1]})})[0]||null,error:null})},
@@ -47,6 +48,20 @@ window.__DB = {
   await p.click('button[data-act=qv][data-q=valide]'); await p.waitForTimeout(300); const q2 = await p.innerText('.sheet');
   ok(/dossier 2 sur 3/.test(q2), 'Après traitement, le dossier suivant s\'ouvre');
   await p.click('button[data-act=qstop]'); await p.click('button[data-act=close]');
+  // --- Lot 3B : agenda, rendez-vous, actions, notes, vues rapides ---
+  await p.click('#tabs button[data-v=agenda]'); const ag = await p.innerText('#app');
+  ok(/Rendez-vous/.test(ag) && /\(1\)/.test(ag), 'Agenda : vues avec compteurs');
+  await p.click('button[data-act=agv][data-v=dater]'); ok(/À dater/.test(await p.innerText('#app')), 'Agenda : RDV à dater séparé');
+  await p.click('button[data-act=agv][data-v=tous]'); await p.click('#app tr.click:has-text("planifié")'); await p.waitForSelector('.sheet'); const rv = await p.innerText('.sheet');
+  ok(/Rendez-vous/.test(rv) && /planifié/.test(rv) && /Reporter ou modifier/.test(rv), 'Fiche : carte Rendez-vous (statut, report)');
+  ok(/Ajouter une note/.test(rv) && /Contact établi/.test(rv), 'Fiche : notes et bouton Contact établi');
+  await p.screenshot({ path: process.env.SHOT_RDV || '/tmp/ui_rdv.png' });
+  await p.click('button[data-act=form][data-pre=annule]'); await p.click('button[data-act=saveform][data-k=rdvst]'); ok(/suite|rappel/i.test(await p.innerText('#app')), 'RDV annulé sans rappel refusé');
+  await p.click('button[data-act=close]');
+  await p.click('#tabs button[data-v=contacts]'); const qv = await p.innerText('#app');
+  ok(/Rappels en retard \(1\)/.test(qv) && /Sans prochaine action/.test(qv), 'Vues rapides avec compteurs');
+  await p.click('button[data-act=qvw][data-v=late]'); ok(/1 dossier/.test(await p.innerText('#tbl')), 'Vue rapide : rappels en retard');
+  await p.click('button[data-act=resetf]');
   await p.click('#tabs button[data-v=stats]'); const st = await p.innerText('#app');
   ok(/Date de réception|Sans date de réception/.test(st) && /non calculable/i.test(st), 'Pilotage : réactivité/taux non calculables sans données');
   ok(/1 vente/.test(st) || /vente\(s\)/.test(st), 'Pilotage : ventes datées');
