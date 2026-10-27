@@ -13,7 +13,8 @@ window.__DB = {
  D.requests=[R({quality:'a_verifier',import_batch_id:1,imported_at:'2026-10-26T13:00:00Z'}),R({quality:'a_verifier',import_batch_id:1,imported_at:'2026-10-26T13:00:00Z',assigned_to:'x'}),
    R({quality:'valide',import_batch_id:1,imported_at:'2026-10-26T13:00:00Z',assigned_to:'x',stage:'rdv_pris',rdv_origin:'import'}),
    R({quality:'valide',received_on:'2026-10-20',received_precision:'jour',assigned_to:'x'}),R({quality:'valide',received_on:'2026-10-21',assigned_to:'y',stage:'vente_faite',sale_on:'2026-10-25',sale_amount:5000,sale_vat:'HT'}),R({quality:'a_verifier',alerts:['Adresse email douteuse']})];
- var tm=new Date(Date.now()+864e5).toISOString().slice(0,10);D.requests.push(R({quality:'valide',received_on:'2026-10-22',assigned_to:'adm',stage:'rdv_pris',rdv_on:tm,rdv_time:'10:00:00',rdv_origin:'confirme',rdv_status:'planifie'}));D.tasks=[{id:1,request_id:4,kind:'callback',due_at:'2026-10-26T09:00:00Z',status:'open',all_day:false}];
+ var tm=new Date(Date.now()+864e5).toISOString().slice(0,10);D.requests.push(R({quality:'valide',received_on:'2026-10-22',assigned_to:'adm',stage:'rdv_pris',rdv_on:tm,rdv_time:'10:00:00',rdv_origin:'confirme',rdv_status:'planifie'}));D.requests.push(R({quality:'valide',received_on:'2026-10-15',assigned_to:'adm',stage:'devis_realise',quote_ref:'D-77'}),R({quality:'valide',received_on:'2026-10-16',assigned_to:'adm',stage:'vente_faite',sale_on:'2026-10-20',sale_amount:0,sale_vat:'HT'}));
+ D.tasks=[{id:1,request_id:4,kind:'callback',due_at:'2026-10-26T09:00:00Z',status:'open',all_day:false}];
  D.requests.forEach(function(r){r.contacts.email_raw=r.id===4?'a@exemple.test':''; if(r.id===6)r.contacts.phone_raw='';});
  function q(t){var f=[],lim=null;var o={select:function(){return o},eq:function(c,v){f.push([c,v]);return o},is:function(){return o},order:function(){return o},range:function(a,b){return o},
   maybeSingle:function(){return Promise.resolve({data:(window.__DB[t]||[]).filter(function(r){return f.every(function(x){return r[x[0]]===x[1]})})[0]||null,error:null})},
@@ -94,6 +95,15 @@ window.__DB = {
   ok(/Reprise historique/.test(im1) && /Aucune relance/.test(im1), 'Import : effets de la reprise historique expliqués');
   await p.check('input[name=imode][value=new]'); const im2 = await p.innerText('#app');
   ok(/sont ignorées/.test(im2) && /Date de réception commune/.test(im2), 'Import : nouvelles demandes, colonnes historiques ignorées et date commune facultative');
+  // --- RAP01 : devis, ventes, relances ---
+  await p.click('#tabs button[data-v=contacts]'); await p.click('button[data-act=resetf]'); await p.selectOption('#fpg', '100');
+  await p.click('#tbl tr:has-text("Devis réalisé") a[data-act=open] >> nth=0'); await p.waitForSelector('.sheet'); const dv = await p.innerText('.sheet');
+  ok(/suite conseillée/i.test(dv) && /Programmer la relance du devis/.test(dv), 'Devis réalisé : la relance du devis est proposée');
+  await p.click('button[data-act=form][data-k=relance]'); await p.click('button[data-act=saveform][data-k=relance]'); ok(/date de la relance/.test(await p.innerText('#app')), 'Relance sans date : refusée');
+  await p.click('button[data-act=close]');
+  await p.click('#tbl tr:has-text("Vente faite") a[data-act=open] >> nth=-1'); await p.waitForSelector('.sheet'); const vt = await p.innerText('.sheet');
+  ok(/vente enregistrée/i.test(vt) && /montant nul/.test(vt) && /Corriger la vente/.test(vt), 'Vente : montant nul distingué du montant absent, correction possible');
+  await p.click('button[data-act=close]');
   // --- Lot 4 : attribution en masse et Équipe ---
   await p.click('#tabs button[data-v=assign]'); const as1 = await p.innerText('#app');
   ok(/Dossiers à attribuer ou à réattribuer/.test(as1) && /Simulation des zones/.test(as1), 'Attribution : liste filtrable et simulation des zones');
