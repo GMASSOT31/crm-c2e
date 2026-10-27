@@ -79,6 +79,21 @@ window.__DB = {
   await p.click('button[data-act=dupdo][data-d=distinct] >> nth=0'); ok(/justification est obligatoire/.test(await p.innerText('#app')), 'Garder distincts sans justification : refusé');
   await p.click('button[data-act=dupdo][data-d=doublon] >> nth=0'); ok(/sera marqué doublon/.test(await p.innerText('#confirm')) && /Rien n.est supprimé/.test(await p.innerText('#confirm')), 'Confirmer un doublon : demande de confirmation, rien supprimé');
   await p.click('button[data-act=confirmno]'); await p.click('button[data-act=close]');
+  // --- ENT02 : ajout et import ---
+  await p.click('#tabs button[data-v=add]'); await p.fill('#paste', 'Nom Dubois\nPrénom Laura\nTéléphone 06 12 34 56 78\nAdresse e-mail laura.dubois@exemple.test\nCode Postal 31200\nVille Toulouse'); await p.click('button[data-act=parse]');
+  ok(await p.locator('input[name=pw]').count() >= 1, 'Ajout : types de travaux en cases à cocher');
+  ok(/Attribuable à un commercial : oui/.test(await p.innerText('#p_ready')), 'Ajout : état du brouillon (attribuable) affiché');
+  await p.screenshot({ path: process.env.SHOT_ADD || '/tmp/ui_add.png' });
+  await p.fill('#p_email', 'pas-un-email'); ok(/Adresse email invalide/.test(await p.innerText('#e_email')) && (await p.getAttribute('#p_email', 'aria-invalid')) === 'true', 'Ajout : erreur affichée sous le champ, saisie conservée');
+  await p.fill('#p_cp', '312'); ok(/5 chiffres/.test(await p.innerText('#e_cp')), 'Ajout : code postal invalide signalé');
+  await p.fill('#p_name', ''); await p.fill('#p_phone', ''); await p.fill('#p_email', ''); ok(/rien à enregistrer/.test(await p.innerText('#p_ready')), 'Ajout : rien à enregistrer sans nom ni contact');
+  await p.click('button[data-act=addmode][data-m=file]');
+  await p.setInputFiles('#ifile', { name: 'demandes.csv', mimeType: 'text/csv', buffer: Buffer.from('Nom;Téléphone;Email;Code postal;Date de réception\nMARTIN Paul;0612345678;paul@exemple.test;1000;2026-10-12\nTOTAL;;;;\nDURAND;;;31000;\n', 'utf-8') });
+  await p.waitForSelector('text=Type d\'import'); const im1 = await p.innerText('#app');
+  ok(/Correspondance des colonnes/.test(im1) && /Lignes lues : 3 = à créer ou liées 1 \+ ignorées 1 \+ rejetées 1/.test(im1), 'Import : aperçu des colonnes et bilan réconcilié (lues = créées + ignorées + rejetées)');
+  ok(/Reprise historique/.test(im1) && /Aucune relance/.test(im1), 'Import : effets de la reprise historique expliqués');
+  await p.check('input[name=imode][value=new]'); const im2 = await p.innerText('#app');
+  ok(/sont ignorées/.test(im2) && /Date de réception commune/.test(im2), 'Import : nouvelles demandes, colonnes historiques ignorées et date commune facultative');
   // --- Lot 4 : attribution en masse et Équipe ---
   await p.click('#tabs button[data-v=assign]'); const as1 = await p.innerText('#app');
   ok(/Dossiers à attribuer ou à réattribuer/.test(as1) && /Simulation des zones/.test(as1), 'Attribution : liste filtrable et simulation des zones');
