@@ -19,3 +19,5 @@ $P -f tests/lot4.sql 2>&1 | grep 'LOT\|FAIL\|ERROR'
 $P -f tests/lot5.sql 2>&1 | grep 'LOT\|FAIL\|ERROR'
 $P -f tests/lot6.sql 2>&1 | grep 'LOT\|FAIL\|ERROR'
 $P -f tests/lot7.sql 2>&1 | grep 'LOT\|FAIL\|ERROR'
+$P -f tests/lot8.sql 2>&1 | grep 'LOT\|FAIL\|ERROR'
+node tests/kpi.test.js

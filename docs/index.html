@@ -203,7 +203,7 @@ var TZ='Europe/Paris';
 function fD(i){return i?new Date(String(i).length<=10?i+'T12:00:00':i).toLocaleDateString('fr-FR',{timeZone:TZ}):'date inconnue'}
 function fDT(i){return i?new Date(i).toLocaleString('fr-FR',{timeZone:TZ,dateStyle:'short',timeStyle:'short'}):''}
 function now(){return new Date().toISOString()}
-function day(n){var d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+function day(n){return addDays(KPI.parisDay(now()),n)}
 var STAGES={recu:'Reçu',a_contacter:'À contacter',contact_etabli:'Contact établi',rdv_pris:'RDV pris',devis_a_faire:'Devis à faire',devis_realise:'Devis réalisé',vente_faite:'Vente faite',cloture_sans_vente:'Clôturé sans vente'};
 var RESULTS={pas_de_reponse:'Pas de réponse',a_rappeler:'À rappeler',pas_interesse:'Pas intéressé',trop_loin:'Trop loin',injoignable:'Injoignable',faux_numero:'Faux numéro',trop_tard:'Trop tard',emploi_formation:'Demande emploi ou formation',autre:'Autre'};
 var QUAL={a_verifier:'À vérifier',valide:'Validé',doublon:'Doublon',spam:'Spam confirmé'};
@@ -218,7 +218,8 @@ function parseMail(txt){var P={},al=[],lines=txt.replace(/\r/g,'').split('\n'),m
   function set(k,v,l){if(v!=null&&String(v).trim()!==''&&!P[k])P[k]={v:String(v).trim(),from:l}}
   clean.forEach(function(l){var t=l.trim(),m;if(!t)return;
     if(m=t.match(/^nom du formulaire\s*[:\-]?\s*(.+)$/i))return set('form',m[1],t);
-    if(m=t.match(/^(?:nom)\s*[:\-]?\s*(.+)$/i)&&t.match(/^nom\b(?!\s+du)/i)&&t.match(/^nom\s*[:\-]?\s*(.+)$/i))set('nom',t.match(/^nom\s*[:\-]?\s*(.+)$/i)[1],t);
+    if(m=t.match(/^nom\s+(?:et\s+pr[ée]nom|complet)\s*[:\-]?\s*(.+)$/i)){if(!/^(true|false)$/i.test(m[1].trim()))set('full',m[1],t);return}
+    if((m=t.match(/^nom\b(?!\s+(?:du\s+)?formulaire)\s*[:\-]?\s*(.+)$/i))&&!/^(true|false)$/i.test(m[1].trim()))set('nom',m[1],t);
     if(m=t.match(/^pr[ée]nom\s*[:\-]?\s*(.+)$/i))set('prenom',m[1],t);
     if(m=t.match(/^(?:t[ée]l[ée]phone|t[ée]l\.?)\s*[:\-]?\s*(\+?[\d .\-]{8,})/i))set('tel',m[1],t);
     if(m=t.match(/^(?:adresse\s*e[\s\-]?mail(?:\s*\d+)?|e-?mail)\s*[:\-]?\s*(\S+@\S+)/i)){if(!/webflow|no-?reply/i.test(m[1]))set('mail',m[1],t)}
@@ -243,7 +244,7 @@ function parseMail(txt){var P={},al=[],lines=txt.replace(/\r/g,'').split('\n'),m
   if(P.form&&!srcOk)al.push('Source « '+P.form.v+' » inconnue du référentiel : à valider.');
   var avail=[];if(P.am&&P.am.v==='true')avail.push('9 h–12 h');if(P.pm&&P.pm.v==='true')avail.push('14 h–18 h');
   var safe=clean.join('\n').replace(/\n.*(revenus|composition du foyer).*/ig,'');
-  return{P:P,al:al,works:works,src:srcOk||'',srcLabel:src,avail:avail.join(' et '),safe:safe,fields:{name:[P.nom&&P.nom.v,P.prenom&&P.prenom.v].filter(Boolean).join(' '),phone:P.tel?P.tel.v:'',email:P.mailfix?'':mail,mailSuggest:P.mailfix||'',cp:P.cp?P.cp.v:'',city:P.ville?P.ville.v:'',budget:P.budget?P.budget.v:'',campaign:P.campagne?P.campagne.v:''}}}
+  return{P:P,al:al,works:works,src:srcOk||'',srcLabel:src,avail:avail.join(' et '),safe:safe,fields:{name:(P.full&&!P.nom&&!P.prenom)?P.full.v:[P.nom&&P.nom.v,P.prenom&&P.prenom.v].filter(Boolean).join(' '),phone:P.tel?P.tel.v:'',email:P.mailfix?'':mail,mailSuggest:P.mailfix||'',cp:P.cp?P.cp.v:'',city:P.ville?P.ville.v:'',budget:P.budget?P.budget.v:'',campaign:P.campagne?P.campagne.v:''}}}
 
 
 function toast(t,k){ui.toast={t:t,k:k||'ok'};render()}
@@ -253,21 +254,76 @@ async function loadAll(){
   D.reqs=all.map(function(r){var c=r.contacts||{};r.name=c.display_name||'';r.phone=c.phone_raw||'';r.email=c.email_raw||'';r.city=c.city||'';r.cp=c.postal_code||'';r.address=c.address||'';r.source=(r.sources&&r.sources.name)||'';r.sourceOrig=r.source_label_original||r.source;r.works=(r.request_work_types||[]).map(function(x){return x.work_types.name});return r});
   var fbq=await SB.from('feedback').select('*').order('created_at',{ascending:false});D.fb=fbq.error?[]:fbq.data;
   var t=await SB.from('tasks').select('*').eq('status','open');if(t.error)throw t.error;D.tasks=t.data;
+  await loadStatsData();
   var p=await SB.from('profiles').select('*').order('full_name');if(p.error)throw p.error;D.profiles=p.data;
   if(ME&&ME.role!=='commercial'){var zz=await SB.from('zone_rules').select('*').eq('active',true);D.zones=zz.data||[]}
 }
 function P(id){return D.profiles.filter(function(p){return p.id===id})[0]}
 function R(id){return D.reqs.filter(function(r){return r.id===id})[0]}
 function staff(){return ME.role!=='commercial'}
-function stagePill(r){var c={recu:'mu',a_contacter:'info',contact_etabli:'info',rdv_pris:'warn',devis_a_faire:'warn',devis_realise:'warn',vente_faite:'ok',cloture_sans_vente:'mu'}[r.stage];return '<span class="pill '+c+'">'+STAGES[r.stage]+'</span>'}
+function stagePill(r){var c={recu:'mu',a_contacter:'info',contact_etabli:'info',rdv_pris:'warn',devis_a_faire:'warn',devis_realise:'warn',vente_faite:'ok',cloture_sans_vente:'mu'}[r.stage];return '<span class="pill '+c+'">'+STAGES[r.stage]+(r.stage==='rdv_pris'&&!r.rdv_on?' · à dater':'')+'</span>'}
 function qualPill(r){if(r.quality==='valide')return '';return ' <span class="pill '+(r.quality==='a_verifier'?'warn':'bad')+'">'+QUAL[r.quality]+'</span>'}
 function opt(list,sel,all){return (all?'<option value="">'+all+'</option>':'')+list.map(function(x){var v=Array.isArray(x)?x[0]:x,l=Array.isArray(x)?x[1]:x;return '<option value="'+esc(v)+'"'+(v===sel?' selected':'')+'>'+esc(l)+'</option>'}).join('')}
 function comms(active){return D.profiles.filter(function(p){return p.role==='commercial'&&(!active||p.active)})}
 function openCount(id){return D.reqs.filter(function(r){return r.assigned_to===id&&r.stage!=='cloture_sans_vente'&&r.stage!=='vente_faite'}).length}
 function lateTasks(){var n=now();return D.tasks.filter(function(t){return t.kind!=='mail'&&t.due_at&&t.due_at<n})}
 function lateCount(id){return lateTasks().filter(function(t){var r=R(t.request_id);return r&&r.assigned_to===id}).length}
-function unassigned(r){var u=r.assigned_to&&P(r.assigned_to);return !r.archived&&['cloture_sans_vente','vente_faite'].indexOf(r.stage)<0&&['doublon','spam'].indexOf(r.quality)<0&&(!r.assigned_to||(u&&!u.active))}
+function unassigned(r){var u=r.assigned_to&&P(r.assigned_to);return !r.archived&&KPI.isOpen(r)&&!KPI.excluded(r)&&(!r.assigned_to||(u&&!u.active))}
 function untreated(r){return r.assigned_to&&!r.archived&&r.stage==='a_contacter'&&r.last_result==null&&['doublon','spam'].indexOf(r.quality)<0}
+/*KPI-BEGIN : couche de calcul unique (Accueil, Pilotage, Statistiques, listes). Définitions : diagnostic/lot1-constat.md */
+var KPI=(function(){
+  var BIZ=['no_answer','contact','callback','appointment','quote','sale','close'],CLOSED=['cloture_sans_vente','vente_faite'];
+  var fmtP=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'});
+  function parisDay(iso){return iso?fmtP.format(new Date(iso)):null}
+  function recvDay(r){return r.received_at?parisDay(r.received_at):(r.received_on?String(r.received_on).slice(0,10):null)}
+  function isOpen(r){return CLOSED.indexOf(r.stage)<0}
+  function excluded(r){return r.quality==='doublon'||r.quality==='spam'||!!r.opt_out}
+  function isValid(r){return r.quality==='valide'&&!r.opt_out}
+  function ids(l){return l.map(function(r){return r.id})}
+  function inR(d,a,b){return !!d&&d>=a&&d<=b}
+  function compute(ctx,o){
+    var users={};ctx.profiles.forEach(function(p){users[p.id]=p});
+    var byReq={};(ctx.acts||[]).forEach(function(a){(byReq[a.request_id]=byReq[a.request_id]||[]).push(a)});
+    function A(r){return byReq[r.id]||[]}
+    function has(r,t){return A(r).some(function(a){return t.indexOf(a.type)>-1})}
+    var activeUser=function(id){return !!id&&!!users[id]&&users[id].active};
+    var scope=ctx.reqs.filter(function(r){return !r.archived&&(!o.com||r.assigned_to===o.com)});
+    var coh=scope.filter(function(r){return inR(recvDay(r),o.from,o.to)}),undated=scope.filter(function(r){return !recvDay(r)});
+    var valid=coh.filter(isValid),open=scope.filter(isOpen);
+    var confirmed=function(r){return r.rdv_origin==='confirme'||has(r,['appointment'])};
+    var K={from:o.from,to:o.to};
+    K.recus=coh;K.valides=valid;K.averifier=coh.filter(function(r){return r.quality==='a_verifier'});K.exclus=coh.filter(excluded);K.sansDate=undated;
+    K.averifierTous=scope.filter(function(r){return r.quality==='a_verifier'});
+    K.nonAttribues=open.filter(function(r){return !excluded(r)&&!r.assigned_to});
+    K.aReattribuer=open.filter(function(r){return !excluded(r)&&r.assigned_to&&!activeUser(r.assigned_to)});
+    K.aAttribuer=K.nonAttribues.concat(K.aReattribuer);
+    K.cloturesNonAttribues=scope.filter(function(r){return !isOpen(r)&&!r.assigned_to&&!excluded(r)});
+    var untr=open.filter(function(r){return isValid(r)&&activeUser(r.assigned_to)&&!has(r,BIZ)});
+    K.nonTraites=untr.filter(function(r){return !r.import_batch_id});K.nonTraitesReprise=untr.filter(function(r){return !!r.import_batch_id});
+    var seen={};K.enRetard=(ctx.tasks||[]).filter(function(t){if(t.kind==='mail'||!t.due_at||t.due_at>=ctx.now||t.status&&t.status!=='open')return false;var r=scope.filter(function(x){return x.id===t.request_id})[0];if(!r||!isOpen(r)||seen[r.id])return false;seen[r.id]=1;return true}).map(function(t){return scope.filter(function(x){return x.id===t.request_id})[0]});
+    K.rdv=valid.filter(confirmed);K.rdvActuels=valid.filter(function(r){return r.stage==='rdv_pris'});
+    K.rdvADater=scope.filter(function(r){return r.stage==='rdv_pris'&&!r.rdv_on});
+    K.rdvImportesNonValides=scope.filter(function(r){return r.rdv_origin==='import'&&!confirmed(r)&&!isValid(r)});
+    K.devis=valid.filter(function(r){return r.quote_ref!=null||['devis_realise','vente_faite'].indexOf(r.stage)>-1||has(r,['quote'])});
+    K.ventesCohorte=valid.filter(function(r){return r.stage==='vente_faite'||!!r.sale_on||has(r,['sale'])});
+    K.contactes=valid.filter(function(r){return has(r,['no_answer','contact','callback','appointment','quote','sale'])});
+    K.attribues=coh.filter(function(r){return !!r.assigned_to});
+    var rt=function(n,d){return d?Math.round(1000*n/d)/10:null};
+    K.tRdv=rt(K.rdv.length,valid.length);K.tVente=rt(K.ventesCohorte.length,valid.length);K.tDevis=rt(K.ventesCohorte.length,K.devis.length);K.tRdvVente=rt(K.ventesCohorte.length,K.rdv.length);
+    // Ventes : par date de vente (événement de la période), HT et TTC séparés, jamais additionnés
+    var sv=scope.filter(function(r){return inR(r.sale_on&&String(r.sale_on).slice(0,10),o.from,o.to)});
+    K.ventes=sv;K.ventesSansDate=scope.filter(function(r){return r.stage==='vente_faite'&&!r.sale_on});
+    K.caHT=0;K.caTTC=0;K.sansMontant=0;K.montantNul=0;var nHT=0,nTTC=0;
+    sv.forEach(function(r){if(r.sale_amount==null){K.sansMontant++;return}var m=+r.sale_amount;if(m===0){K.montantNul++;return}if(r.sale_vat==='TTC'){K.caTTC+=m;nTTC++}else{K.caHT+=m;nHT++}});
+    K.panierHT=nHT?K.caHT/nHT:null;K.panierTTC=nTTC?K.caTTC/nTTC:null;
+    // Réactivité : réception horodatée à la minute -> première action métier ; jamais de date inventée
+    var d=[],excl=0;valid.forEach(function(r){if(r.received_precision!=='minute'||!r.received_at){excl++;return}
+      var f=A(r).filter(function(a){return ['no_answer','contact','callback','appointment'].indexOf(a.type)>-1}).sort(function(p,q){return p.at<q.at?-1:1})[0];
+      if(!f){excl++;return}var m=(new Date(f.at)-new Date(r.received_at))/6e4;if(m<0){excl++;return}d.push(m)});
+    K.reactiviteN=d.length;K.reactiviteExclus=excl;K.reactiviteMin=d.length?d.reduce(function(a,b){return a+b},0)/d.length:null;
+    return K}
+  return{compute:compute,recvDay:recvDay,parisDay:parisDay,isOpen:isOpen,excluded:excluded,isValid:isValid,ids:ids}})();
+/*KPI-END*/
 
 /* ---------- Connexion ---------- */
 function loginId(v){v=String(v||'').trim();return v.indexOf('@')<0?v.toLowerCase()+'@crm.local':v}
@@ -300,14 +356,11 @@ function render(){
   var v={home:vHome,contacts:vContacts,add:vAdd,assign:vAssign,stats:vStats,dash:vDash,fb:vFb,team:vTeam}[ui.view];
   $('#app').innerHTML=(ui.toast?'<div class="msg '+ui.toast.k+'" role="status">'+esc(ui.toast.t)+'</div>':'')+v();ui.toast=null;
   if(ui.view==='contacts')fillTable();renderModal()}
-function counterBtn(n,label,ids){return '<button class="cnt" data-act="goto" data-ids=\''+JSON.stringify(ids)+'\'><b>'+n+'</b><span>'+label+'</span></button>'}
+function counterBtn(n,label,ids,sub){return '<button class="cnt" data-act="goto" data-label="'+esc(label)+'" data-ids=\''+JSON.stringify(ids)+'\'><b>'+n+'</b><span>'+label+'</span>'+(sub?'<span class="muted small">'+sub+'</span>':'')+'</button>'}
 function vHome(){
   if(!staff())return vHomeCom();
-  var all=D.reqs.filter(function(r){return !r.archived}),f=function(fn){return all.filter(fn).map(function(r){return r.id})};
-  var rec=f(function(r){return (r.created_at||'')>=day(-30)}),un=f(unassigned),ver=f(function(r){return r.quality==='a_verifier'}),nt=f(untreated);
-  var late=lateTasks().map(function(t){return t.request_id}).filter(function(v,i,a){return a.indexOf(v)===i});
-  var rea=D.reqs.filter(function(r){var u=r.assigned_to&&P(r.assigned_to);return u&&!u.active&&['cloture_sans_vente','vente_faite'].indexOf(r.stage)<0}).length;
-  return '<h2>Accueil</h2><div class="grid">'+counterBtn(rec.length,'Contacts reçus (30 jours)',rec)+counterBtn(un.length,'Non attribués',un)+counterBtn(ver.length,'À vérifier',ver)+counterBtn(nt.length,'Non traités',nt)+counterBtn(late.length,'Actions en retard',late)+'</div>'+(rea?'<div class="msg warn">'+rea+' dossier(s) appartiennent à un commercial désactivé : à réattribuer (onglet Attribution).</div>':'')+(all.length?'':'<div class="card"><h3>Bienvenue</h3><p>Aucun dossier pour l\'instant. Commencez par l\'onglet <b>Ajouter</b> : collez le texte d\'un mail, ou saisissez un contact à la main. Créez ensuite les comptes de vos commerciaux dans l\'onglet <b>Équipe</b>.</p></div>')}
+  var K=KPI.compute(kctx(),{from:day(-29),to:day(0)}),I=KPI.ids,nr=K.nonTraitesReprise.length;
+  return '<h2>Accueil</h2><div class="grid">'+counterBtn(K.recus.length,'Contacts reçus (30 jours)',I(K.recus))+counterBtn(K.sansDate.length,'Sans date de réception',I(K.sansDate))+counterBtn(K.aAttribuer.length,'À attribuer ou réattribuer',I(K.aAttribuer),K.nonAttribues.length+' sans responsable · '+K.aReattribuer.length+' à réattribuer')+counterBtn(K.averifierTous.length,'À vérifier',I(K.averifierTous))+counterBtn(K.nonTraites.length,'Non traités',I(K.nonTraites),nr?nr+' reprise(s) historique(s) à statut incertain, à part':'')+counterBtn(K.enRetard.length,'Actions en retard',I(K.enRetard))+'</div>'+(nr?'<p class="small"><button data-act="goto" data-label="Reprises historiques non traitées" data-ids=\''+JSON.stringify(I(K.nonTraitesReprise))+'\'>Voir les '+nr+' reprise(s) historique(s) sans action enregistrée</button></p>':'')+'<p class="muted small">Reçus : 30 derniers jours, heure de Paris. Les autres compteurs portent sur tous les dossiers ouverts. « Non traité » = dossier validé, attribué, sans appel, rappel, RDV ni devis enregistré ; une simple ouverture de fiche ou une attribution ne compte pas. Clôturés non attribués : '+K.cloturesNonAttribues.length+' (non comptés).</p>'+(D.reqs.length?'':'<div class="card"><h3>Bienvenue</h3><p>Aucun dossier pour l\'instant. Commencez par l\'onglet <b>Ajouter</b> : collez le texte d\'un mail, ou saisissez un contact à la main. Créez ensuite les comptes de vos commerciaux dans l\'onglet <b>Équipe</b>.</p></div>')}
 var pendingConfirm=null;
 function askConfirm(title,text,fn){pendingConfirm=fn;$('#confirm').innerHTML='<div class="dlgbg"><div class="dlg" role="alertdialog" aria-modal="true" aria-label="'+esc(title)+'"><h3>'+esc(title)+'</h3><p>'+esc(text)+'</p><div class="row"><button class="p" data-act="confirmyes">Oui, valider</button><button data-act="confirmno">Annuler</button></div></div></div>'}
 function listCard(title,rows,empty){return '<div class="card"><h3>'+title+' <span class="pill mu">'+rows.length+'</span></h3>'+(rows.length?'<div class="tw"><table class="rt"><tbody>'+rows.map(function(r){return '<tr class="click" data-act="open" data-id="'+r.id+'"><td class="pr"><b>'+esc(r.name||'(sans nom)')+'</b><br><span class="muted small">'+esc(r.city)+' · '+esc(r.works.join(', '))+'</span></td><td class="st">'+stagePill(r)+'</td><td class="small ht">'+esc(r.hint||'')+'</td><td class="call">'+(r.phone?'<a class="callbtn" href="tel:'+esc(normPhone(r.phone))+'" aria-label="Appeler">📞</a>':'')+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">'+empty+'</p>')+'</div>'}
@@ -319,7 +372,7 @@ function vHomeCom(){var mine=D.reqs.filter(function(r){return !r.archived}),n=fu
 function filtered(){var f=ui.f,q=norm(f.q);return D.reqs.filter(function(r){if(r.archived)return false;if(f.ids&&f.ids.indexOf(r.id)<0)return false;if(f.source&&r.source!==f.source)return false;if(f.stage&&r.stage!==f.stage)return false;if(f.com&&(f.com==='-'?r.assigned_to:r.assigned_to!==f.com))return false;if(f.work&&r.works.indexOf(f.work)<0)return false;
   if(q){var hay=norm(r.name+' '+r.email+' '+r.city)+' '+(normPhone(r.phone)||'');var qp=normPhone(f.q);if(hay.indexOf(q)<0&&!(qp&&qp.length>3&&hay.indexOf(qp)>-1))return false}return true})}
 function vContacts(){var f=ui.f;
-  return '<div class="row sp"><h2>'+(staff()?'Contacts':'Mes dossiers')+'</h2>'+(staff()?'<button data-act="export">Exporter la liste filtrée (CSV)</button>':'')+'</div>'+(f.ids?'<div class="msg info">Liste limitée à '+f.ids.length+' dossier(s). <button data-act="clearids">Voir tout</button></div>':'')+
+  return '<div class="row sp"><h2>'+(staff()?'Contacts':'Mes dossiers')+'</h2>'+(staff()?'<button data-act="export">Exporter la liste filtrée (CSV)</button>':'')+'</div>'+(f.ids?'<div class="msg info">'+(f.label?esc(f.label)+' : ':'Liste limitée à ')+f.ids.length+' dossier(s). <button data-act="clearids">Voir tout</button></div>':'')+
   '<div class="card flt"><label><span class="lbl2">Recherche (nom, téléphone, email)</span><input id="fq" type="search" value="'+esc(f.q||'')+'" placeholder="Nom, téléphone, email"></label><details id="fdet"'+(ui.fopen||window.innerWidth>600?' open':'')+'><summary>Filtres</summary><div class="row" style="margin-top:8px"><label>Source<select id="fs">'+opt(S.sources,f.source,'Toutes')+'</select></label><label>Étape<select id="fe">'+opt(Object.keys(STAGES).map(function(k){return [k,STAGES[k]]}),f.stage,'Toutes')+'</select></label><label>Travaux<select id="fw">'+opt(S.works,f.work,'Tous')+'</select></label>'+(staff()?'<label>Commercial<select id="fc">'+opt([['-','Non attribué']].concat(comms().map(function(u){return [u.id,u.full_name]})),f.com,'Tous')+'</select></label>':'')+'<button data-act="resetf">Effacer les filtres</button></div></details></div><div id="tbl"></div><div id="exp"></div>'}
 function lastContact(r){return r.last_result?RESULTS[r.last_result]:'—'}
 function fillTable(){var rows=filtered(),pg=15,pages=Math.max(1,Math.ceil(rows.length/pg));if(ui.page>=pages)ui.page=pages-1;var sl=rows.slice(ui.page*pg,ui.page*pg+pg);
@@ -345,7 +398,7 @@ function formHtml(r){var k=ui.form;
 function renderModal(){var el=$('#modal');if(!ui.open){el.innerHTML='';return}var r=R(ui.open);if(!r){el.innerHTML='';ui.open=null;return}
   var st=counters(),u=P(r.assigned_to),mb=mailBlock(r),mt=D.tasks.filter(function(t){return t.request_id===r.id&&t.kind==='mail'})[0],closed=r.stage==='cloture_sans_vente';
   var h='<div class="panel" data-act="closepanel"><div class="sheet" role="dialog" aria-label="Fiche dossier"><div class="row sp hd"><h2>'+esc(r.name||'(sans nom)')+' <span class="muted small">n°'+r.id+'</span></h2><button data-act="close">Fermer ✕</button></div><div>'+stagePill(r)+qualPill(r)+(r.last_result?' <span class="pill mu">'+esc(RESULTS[r.last_result])+'</span>':'')+'</div>';
-  h+=(r.phone?'<a class="callbig" href="tel:'+esc(normPhone(r.phone))+'">📞 Appeler '+esc(r.phone)+'</a>':'')+'<div class="card"><div class="two"><div class="phoneblk"><div class="muted small">Téléphone</div><b>'+(r.phone?esc(r.phone):'—')+'</b><div class="muted small hint">Un appel n\'est enregistré que si vous choisissez son résultat ci-dessous.</div></div><div><div class="muted small lbl">Email</div><b>'+(r.email?esc(r.email):'—')+'</b>'+(r.email&&!validMail(normMail(r.email))?' <span class="pill bad">à corriger</span>':'')+'</div></div><p style="margin:10px 0 0"><span class="muted small lbl">Projet</span><br class="lbl">'+esc(r.works.join(', ')||'Non précisé')+(r.description?' — '+esc(r.description):'')+'</p><p class="small muted" style="margin:6px 0 0">'+esc([r.address,r.cp,r.city].filter(Boolean).join(' '))+' · Source : '+esc(r.sourceOrig||'inconnue')+' · Reçu le '+fD(r.received_on)+(r.availability?' · Disponibilités : '+esc(r.availability):'')+'</p>'+(staff()?'<p style="margin:8px 0 0">Responsable : <b>'+(u?esc(u.full_name):'non attribué')+'</b>'+(u&&!u.active?' <span class="pill bad">désactivé</span>':'')+'</p>':'')+'</div>';
+  h+=(r.phone?'<a class="callbig" href="tel:'+esc(normPhone(r.phone))+'">📞 Appeler '+esc(r.phone)+'</a>':'')+'<div class="card"><div class="two"><div class="phoneblk"><div class="muted small">Téléphone</div><b>'+(r.phone?esc(r.phone):'—')+'</b><div class="muted small hint">Un appel n\'est enregistré que si vous choisissez son résultat ci-dessous.</div></div><div><div class="muted small lbl">Email</div><b>'+(r.email?esc(r.email):'—')+'</b>'+(r.email&&!validMail(normMail(r.email))?' <span class="pill bad">à corriger</span>':'')+'</div></div><p style="margin:10px 0 0"><span class="muted small lbl">Projet</span><br class="lbl">'+esc(r.works.join(', ')||'Non précisé')+(r.description?' — '+esc(r.description):'')+'</p><p class="small muted" style="margin:6px 0 0">'+esc([r.address,r.cp,r.city].filter(Boolean).join(' '))+' · Source : '+esc(r.sourceOrig||'inconnue')+' · '+(KPI.recvDay(r)?'Reçu le '+fD(KPI.recvDay(r)):'Date de réception non renseignée')+(r.imported_at?' · Importé le '+fD(KPI.parisDay(r.imported_at)):'')+(r.availability?' · Disponibilités : '+esc(r.availability):'')+'</p>'+(staff()?'<p style="margin:8px 0 0">Responsable : <b>'+(u?esc(u.full_name):'non attribué')+'</b>'+(u&&!u.active?' <span class="pill bad">désactivé</span>':'')+'</p>':'')+'</div>';
   if(!closed&&r.stage!=='vente_faite'&&r.assigned_to){h+='<div class="card"><h3>Appels : '+(st.n?'<span class="pill '+(st.n>=3?'bad':'warn')+'">'+st.n+' appel'+(st.n>1?'s':'')+' sans réponse</span>':'<span class="pill mu">aucun appel sans réponse en cours</span>')+' <span class="muted small">total historique : '+st.tot+'</span></h3><div class="acts" style="margin-top:10px"><button data-act="noans" data-id="'+r.id+'" class="p wide">📵 Appel sans réponse</button><button data-act="form" data-k="rdv">📅 RDV pris</button><button data-act="quotetodo" data-id="'+r.id+'">📝 Devis à faire</button><button data-act="form" data-k="devis">📄 Devis réalisé</button><button data-act="form" data-k="vente">💶 Vente faite</button><button data-act="form" data-k="callback" class="wide">⏰ Programmer un rappel</button></div>'+formHtml(r)+'</div>'}
   if(!closed&&r.stage!=='vente_faite'&&!r.assigned_to)h+='<div class="msg info">Dossier non attribué : attribuez-le à un commercial pour enregistrer des appels.</div>';
   if(mt&&!closed){h+='<div class="card"><h3>✉️ Action : envoyer un mail (3 appels sans réponse)</h3>';if(mb)h+='<div class="msg warn">'+esc(mb)+'. Le dossier reste accessible et le traitement par téléphone reste possible.</div>';else{var ml=renderMail(r);h+='<p class="small">À : <b>'+esc(r.email)+'</b><br>Objet : <b>'+esc(ml.subject)+'</b></p><pre>'+esc(ml.body)+'</pre><div class="msg info">Envoi non configuré : aucun mail ne part depuis cette application pour l\'instant. Relisez-le et envoyez-le depuis votre messagerie ; aucun envoi n\'est simulé comme réussi.</div>'}h+='</div>'}
@@ -448,13 +501,20 @@ document.addEventListener('change',function(e){var t=e.target,id=t.id;
 /* ---------- Attribution, pilotage, équipe ---------- */
 function vAssign(){var com=comms(true),rows=D.reqs.filter(unassigned),n=Object.keys(ui.sel).filter(function(k){return ui.sel[k]}).length;
   return '<h2>Attribution</h2><div class="card"><h3>Charge des commerciaux actifs</h3>'+(com.length?'<div class="tw"><table><thead><tr><th>Commercial</th><th class="n">Dossiers ouverts</th><th class="n">Rappels en retard</th></tr></thead><tbody>'+com.map(function(u){return '<tr><td>'+esc(u.full_name)+'</td><td class="n">'+openCount(u.id)+'</td><td class="n">'+lateCount(u.id)+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">Aucun commercial actif. L\'administrateur les crée dans l\'onglet Équipe.</p>')+'</div><div class="card"><h3>Dossiers à attribuer ou à réattribuer <span class="pill mu">'+rows.length+'</span></h3>'+(rows.length?'<div class="tw"><table><thead><tr><th></th><th>Nom</th><th>Source</th><th>Travaux</th><th>Situation</th></tr></thead><tbody>'+rows.map(function(r){var u=r.assigned_to&&P(r.assigned_to),inc=(!r.phone&&!r.email)||!r.name;return '<tr><td><input type="checkbox" data-sel="'+r.id+'"'+(ui.sel[r.id]?' checked':'')+' aria-label="Choisir"></td><td><a href="#" data-act="open" data-id="'+r.id+'"><b>'+esc(r.name||'(sans nom)')+'</b></a></td><td class="small">'+esc(r.source)+'</td><td class="small">'+esc(r.works.join(', '))+'</td><td>'+(u?'<span class="pill bad">Commercial désactivé : '+esc(u.full_name)+'</span>':'<span class="pill warn">Non attribué</span>')+(inc?' <span class="pill bad">incomplet</span>':'')+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">Rien à attribuer.</p>')+'<div class="row" style="margin-top:10px"><label>Attribuer les '+n+' dossier(s) choisi(s) à<select id="atarget">'+opt(com.map(function(u){return [u.id,u.full_name+' ('+openCount(u.id)+' ouverts, '+lateCount(u.id)+' en retard)']}),'','— choisir un commercial —')+'</select></label><label>Dérogation (administrateur, si dossier incomplet)<input id="aover" placeholder="motif"'+(ME.role==='admin'?'':' disabled')+'></label><button class="p" data-act="doassign"'+(n?'':' disabled')+'>Attribuer</button></div></div>'}
-function vStats(){var f=ui.sf||(ui.sf={from:day(-45),to:day(0)}),rs=D.reqs.filter(function(r){return !r.archived});
-  var inP=function(d){d=(d||'').slice(0,10);return d>=f.from&&d<=f.to},coh=rs.filter(function(r){return inP(r.received_on||r.created_at)}),expl=coh.filter(function(r){return r.quality==='valide'}),exc=coh.filter(function(r){return r.quality==='doublon'||r.quality==='spam'});
-  var rdv=expl.filter(function(r){return r.rdv_on}),dev=expl.filter(function(r){return r.quote_ref!=null||['devis_realise','vente_faite'].indexOf(r.stage)>-1}),ven=expl.filter(function(r){return r.stage==='vente_faite'});
-  var pct=function(a,b){return b?Math.round(100*a/b)+' %':'<span class="muted">non calculable</span>'},L=function(l,t){return '<a href="#" data-act="goto" data-ids=\''+JSON.stringify(l.map(function(r){return r.id}))+'\'>'+t+'</a>'};
-  var sales=rs.filter(function(r){return r.sale_on}),amt=sales.filter(function(r){return r.sale_amount!=null}),ht=0,ttc=0;amt.forEach(function(r){if(r.sale_vat==='TTC')ttc+=+r.sale_amount;else ht+=+r.sale_amount});
-  var bySrc={};coh.forEach(function(r){var k=r.source||'(non renseignée)';(bySrc[k]=bySrc[k]||[]).push(r)});
-  return '<h2>'+(staff()?'Pilotage':'Mes résultats')+'</h2><div class="card"><div class="row dates"><label>Du<input type="date" id="sfrom" value="'+f.from+'"></label><label>Au<input type="date" id="sto" value="'+f.to+'"></label><span class="muted small">Cohorte = demandes reçues sur la période. Doublons et spam présentés à part.</span></div></div><div class="grid"><div class="cnt"><b>'+coh.length+'</b><span>'+L(coh,'Contacts reçus')+'</span></div><div class="cnt"><b>'+expl.length+'</b><span>'+L(expl,'Demandes exploitables (validées)')+'</span></div><div class="cnt"><b>'+exc.length+'</b><span>'+L(exc,'Doublons et spam')+'</span></div><div class="cnt"><b>'+rs.filter(unassigned).length+'</b><span>Non attribués</span></div><div class="cnt"><b>'+rs.filter(untreated).length+'</b><span>Non traités</span></div><div class="cnt"><b>'+lateTasks().length+'</b><span>Rappels en retard</span></div></div><div class="card"><h3>Cohorte « reçus sur la période »</h3><div class="grid"><div class="cnt"><b>'+rdv.length+'</b><span>'+L(rdv,'ont obtenu un RDV')+' · taux '+pct(rdv.length,expl.length)+'</span></div><div class="cnt"><b>'+dev.length+'</b><span>'+L(dev,'avec devis')+'</span></div><div class="cnt"><b>'+ven.length+'</b><span>'+L(ven,'ventes')+' · taux '+pct(ven.length,expl.length)+'</span></div></div><p class="small">Montant vendu : <b>'+ht.toLocaleString('fr-FR')+' € HT</b> et <b>'+ttc.toLocaleString('fr-FR')+' € TTC</b> ; '+(sales.length-amt.length)+' vente(s) sans montant (signalées).</p></div><div class="card"><h3>Comparaison des sources (cohorte)</h3><div class="tw"><table><thead><tr><th>Source</th><th class="n">Reçus</th><th class="n">RDV</th><th class="n">Ventes</th><th class="n">Taux RDV</th><th class="n">Taux vente</th></tr></thead><tbody>'+(Object.keys(bySrc).sort().map(function(k){var l=bySrc[k],ex=l.filter(function(r){return r.quality==='valide'}),a=ex.filter(function(r){return r.rdv_on}).length,c=ex.filter(function(r){return r.stage==='vente_faite'}).length;return '<tr><td class="small">'+esc(k)+'</td><td class="n">'+L(l,l.length)+'</td><td class="n">'+a+'</td><td class="n">'+c+'</td><td class="n">'+pct(a,ex.length)+'</td><td class="n">'+pct(c,ex.length)+'</td></tr>'}).join('')||'<tr><td colspan="6" class="muted">Aucune demande sur la période.</td></tr>')+'</tbody></table></div><p class="muted small">Pas de coût d\'acquisition ni de rentabilité : aucun coût n\'est saisi, donc rien n\'est inventé.</p></div>'}
+function vStats(){var f=ui.sf||(ui.sf={from:day(-45),to:day(0)}),K=KPI.compute(kctx(),{from:f.from,to:f.to,com:kcom()}),I=KPI.ids;
+  var pct=function(v){return v==null?'<span class="muted">non calculable</span>':String(v).replace('.',',')+' %'},L=function(l,t){return '<a href="#" data-act="goto" data-label="'+esc(t)+'" data-ids=\''+JSON.stringify(I(l))+'\'>'+t+'</a>'};
+  var set=function(l){var m={};l.forEach(function(r){m[r.id]=1});return m},sv=set(K.valides),sr=set(K.rdv),ss=set(K.ventesCohorte),bySrc={};
+  K.recus.forEach(function(r){var k=r.source||'(non renseignée)';(bySrc[k]=bySrc[k]||[]).push(r)});
+  var reac=K.reactiviteMin==null?'<span class="muted">non calculable</span>':(K.reactiviteMin<60?Math.round(K.reactiviteMin)+' min':Math.round(K.reactiviteMin/6)/10+' h');
+  var cnt=function(l,t,sub){return '<div class="cnt"><b>'+l.length+'</b><span>'+L(l,t)+'</span>'+(sub?'<span class="muted small">'+sub+'</span>':'')+'</div>'};
+  return '<h2>'+(staff()?'Pilotage':'Mes résultats')+'</h2><div class="card"><div class="row dates"><label>Du<input type="date" id="sfrom" value="'+f.from+'"></label><label>Au<input type="date" id="sto" value="'+f.to+'"></label><span class="muted small">Période = date de réception connue (heure de Paris). Les dossiers sans date de réception ne sont jamais placés dans une période : ils sont comptés à part.</span></div></div>'+
+  '<div class="grid">'+cnt(K.recus,'Contacts reçus','avant exclusions de qualité')+cnt(K.valides,'Exploitables validés','qualité validée, hors doublon, spam, opposition')+cnt(K.averifier,'À vérifier','qualité pas encore validée')+cnt(K.exclus,'Doublons, spam, oppositions')+cnt(K.sansDate,'Sans date de réception','hors période')+'</div>'+
+  '<div class="card"><h3>À traiter (tous les dossiers ouverts)</h3><div class="grid">'+cnt(K.nonAttribues,'Non attribués ouverts')+cnt(K.aReattribuer,'À réattribuer','responsable désactivé')+cnt(K.nonTraites,'Non traités',K.nonTraitesReprise.length?K.nonTraitesReprise.length+' reprise(s) historique(s) à part':'')+cnt(K.enRetard,'Rappels en retard')+'</div><p class="muted small">Clôturés non attribués : '+K.cloturesNonAttribues.length+' (catégorie distincte, non comptés ci-dessus).</p></div>'+
+  '<div class="card"><h3>Cohorte « reçus sur la période »</h3><div class="grid">'+cnt(K.rdv,'ont obtenu un RDV','taux '+pct(K.tRdv)+' des exploitables validés')+cnt(K.rdvActuels,'actuellement à l\'étape RDV pris')+cnt(K.devis,'avec devis')+cnt(K.ventesCohorte,'ventes','taux '+pct(K.tVente)+' des exploitables validés')+'</div>'+
+  '<p class="small">Réactivité (réception → première action) : <b>'+reac+'</b> ; '+K.reactiviteN+' dossier(s) pris en compte, '+K.reactiviteExclus+' exclu(s) (heure de réception inconnue, pas encore d\'action ou délai négatif).</p>'+
+  ((K.rdvADater.length||K.rdvImportesNonValides.length)?'<p class="small">'+L(K.rdvADater,K.rdvADater.length+' dossier(s) « RDV pris » sans date de rendez-vous')+' (à dater, non comptés comme RDV confirmés) · '+L(K.rdvImportesNonValides,K.rdvImportesNonValides.length+' RDV importé(s) sur des dossiers non validés')+'</p>':'')+'</div>'+
+  '<div class="card"><h3>Chiffre d\'affaires (ventes datées sur la période)</h3><p><b>'+K.caHT.toLocaleString('fr-FR')+' € HT</b> · <b>'+K.caTTC.toLocaleString('fr-FR')+' € TTC</b> <span class="muted small">(jamais additionnés, aucune conversion)</span></p><p class="small">'+L(K.ventes,K.ventes.length+' vente(s)')+' · '+K.sansMontant+' sans montant · '+K.montantNul+' à montant nul'+(K.panierHT!=null?' · panier moyen HT '+Math.round(K.panierHT).toLocaleString('fr-FR')+' €':'')+(K.panierTTC!=null?' · panier moyen TTC '+Math.round(K.panierTTC).toLocaleString('fr-FR')+' €':'')+(K.ventesSansDate.length?' · '+L(K.ventesSansDate,K.ventesSansDate.length+' vente(s) sans date')+' (hors période)':'')+'</p></div>'+
+  '<div class="card"><h3>Comparaison des sources (cohorte)</h3><div class="tw"><table><thead><tr><th>Source</th><th class="n">Reçus</th><th class="n">Validés</th><th class="n">RDV</th><th class="n">Ventes</th><th class="n">Taux RDV</th><th class="n">Taux vente</th></tr></thead><tbody>'+(Object.keys(bySrc).sort().map(function(k){var l=bySrc[k],ex=l.filter(function(r){return sv[r.id]}),a=ex.filter(function(r){return sr[r.id]}).length,c=ex.filter(function(r){return ss[r.id]}).length,rt=function(n,d){return d?Math.round(1000*n/d)/10:null};return '<tr><td class="small">'+esc(k)+'</td><td class="n">'+L(l,l.length)+'</td><td class="n">'+ex.length+'</td><td class="n">'+a+'</td><td class="n">'+c+'</td><td class="n">'+pct(rt(a,ex.length))+'</td><td class="n">'+pct(rt(c,ex.length))+'</td></tr>'}).join('')||'<tr><td colspan="7" class="muted">Aucune demande avec date de réception sur la période.</td></tr>')+'</tbody></table></div><p class="muted small">Pas de coût d\'acquisition ni de rentabilité : aucun coût n\'est saisi, donc rien n\'est inventé.</p></div>'}
 /* ---------- Statistiques de direction ---------- */
 var PAL=['#62dd4a','#2a9fd6','#f6c642','#0f5ea8','#e46a4b','#8b5cf6','#14b8a6','#94a3b8'];
 function money(n){return Math.round(n||0).toLocaleString('fr-FR')+' €'}
@@ -463,6 +523,8 @@ function fpct(v){return v==null?'—':String(v).replace('.',',')+' %'}
 function addDays(iso,n){var d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function mondayOf(iso){var d=new Date(iso+'T12:00:00'),k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return d.toISOString().slice(0,10)}
 function shortD(iso){var p=iso.split('-');return p[2]+'/'+p[1]}
+function kctx(){return{reqs:D.reqs,acts:D.acts||[],tasks:D.tasks,profiles:D.profiles,now:now()}}
+function kcom(){return ME&&ME.role==='commercial'?ME.id:null}
 async function loadStatsData(){var all=[],from=0;for(;;){var q=await SB.from('activities').select('request_id,type,author,at').order('id').range(from,from+999);if(q.error)throw q.error;all=all.concat(q.data);if(q.data.length<1000)break;from+=1000}D.acts=all}
 function demoData(){var seed=20261026;function rnd(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
   var coms=[['d1','RICHECOEUR Yann',.62,1.1],['d2','JOYEUX Alexis',.55,1.0],['d3','LLEIDA François',.48,.9],['d4','LAMY Christophe',.42,1.05],['d5','BOUSCATEL Rémy',.36,.85],['d6','BOUSCATEL Vincent',.30,.8]];
@@ -486,30 +548,29 @@ function demoData(){var seed=20261026;function rnd(){seed|=0;seed=seed+0x6D2B79F
   return{reqs:reqs,acts:acts,tasks:tasks,profiles:profiles}}
 function dashModel(src,range,com){
   var from=range.from,to=range.to,days=Math.max(1,Math.round((new Date(to)-new Date(from))/864e5)+1),pTo=addDays(from,-1),pFrom=addDays(pTo,-(days-1));
-  var live=src.reqs.filter(function(r){return !r.archived}),dOf=function(r){return String(r.received_on||r.created_at||'').slice(0,10)},inR=function(d,a,b){return d>=a&&d<=b};
+  var live=src.reqs.filter(function(r){return !r.archived}),dOf=function(r){return KPI.recvDay(r)||''},inR=function(d,a,b){return d>=a&&d<=b};
   var accts={};src.acts.forEach(function(a){(accts[a.request_id]=accts[a.request_id]||[]).push(a)});
-  function fl(r){var a=accts[r.id]||[],st=r.stage,has=function(t){return a.some(function(x){return x.type===t})};return{ex:r.quality!=='doublon'&&r.quality!=='spam',ct:['recu','a_contacter'].indexOf(st)<0||has('no_answer')||has('contact')||has('appointment')||r.last_result!=null,rdv:!!r.rdv_on||['rdv_pris','devis_a_faire','devis_realise','vente_faite'].indexOf(st)>-1||has('appointment'),dv:r.quote_ref!=null||['devis_realise','vente_faite'].indexOf(st)>-1||has('quote'),vt:st==='vente_faite'||!!r.sale_on}}
+  function fl(r){var a=accts[r.id]||[];return{ex:KPI.isValid(r),vt:r.stage==='vente_faite'||!!r.sale_on||a.some(function(x){return x.type==='sale'})}}
   function coh(a,b,uid){return live.filter(function(r){return inR(dOf(r),a,b)&&(!uid||r.assigned_to===uid)})}
   function sales(a,b,uid){return live.filter(function(r){return r.sale_on&&inR(String(r.sale_on).slice(0,10),a,b)&&(!uid||r.assigned_to===uid)})}
-  function agg(list,sl,uid){var o={n:list.length,att:0,ex:0,ct:0,rdv:0,dv:0,vt:0};list.forEach(function(r){var f=fl(r);if(r.assigned_to)o.att++;if(f.ex){o.ex++;if(f.ct)o.ct++;if(f.rdv)o.rdv++;if(f.dv)o.dv++;if(f.vt)o.vt++}});
-    o.ventes=sl.length;o.caHT=0;o.caTTC=0;o.sans=0;sl.forEach(function(r){if(r.sale_amount==null){o.sans++;return}if(r.sale_vat==='TTC')o.caTTC+=+r.sale_amount;else o.caHT+=+r.sale_amount});o.ca=o.caHT+o.caTTC;o.panier=(o.ventes-o.sans)?o.ca/(o.ventes-o.sans):null;
-    o.tRdv=ratio(o.rdv,o.ex);o.tVente=ratio(o.vt,o.ex);o.tDevis=ratio(o.vt,o.dv);o.tRdvVente=ratio(o.vt,o.rdv);return o}
-  var G=agg(coh(from,to,com),sales(from,to,com)),P=agg(coh(pFrom,pTo,com),sales(pFrom,pTo,com));
+  var kctx_={reqs:src.reqs,acts:src.acts,tasks:src.tasks,profiles:src.profiles,now:now()};
+  function leg(K){var o={n:K.recus.length,att:K.attribues.length,ex:K.valides.length,ct:K.contactes.length,rdv:K.rdv.length,dv:K.devis.length,vt:K.ventesCohorte.length,ventes:K.ventes.length,caHT:K.caHT,caTTC:K.caTTC,ca:K.caHT,sans:K.sansMontant,panier:K.panierHT,tRdv:K.tRdv,tVente:K.tVente,tDevis:K.tDevis,tRdvVente:K.tRdvVente,delayMin:K.reactiviteMin,delayN:K.reactiviteN,delayExcl:K.reactiviteExclus,retard:K.enRetard.length,sansDate:K.sansDate.length,K:K};return o}
+  function agg(a,b,uid){return leg(KPI.compute(kctx_,{from:a,to:b,com:uid||null}))}
+  var G=agg(from,to,com),P=agg(pFrom,pTo,com);
   var users=src.profiles.filter(function(u){return u.role==='commercial'});
   var late=src.tasks.filter(function(t){return t.kind!=='mail'&&t.due_at&&t.due_at<now()});
-  var perCom=users.map(function(u){var a=agg(coh(from,to,u.id),sales(from,to,u.id));a.u=u;a.appels=src.acts.filter(function(x){return x.type==='no_answer'&&x.author===u.id&&inR(String(x.at).slice(0,10),from,to)}).length;a.retard=late.filter(function(t){var r=live.filter(function(x){return x.id===t.request_id})[0];return r&&r.assigned_to===u.id}).length;return a}).filter(function(a){return a.n||a.ventes});
+  var perCom=users.map(function(u){var a=agg(from,to,u.id);a.u=u;a.appels=src.acts.filter(function(x){return x.type==='no_answer'&&x.author===u.id&&inR(String(x.at).slice(0,10),from,to)}).length;return a}).filter(function(a){return a.n||a.ventes});
   var weekly=days<=100,keyOf=function(d){return weekly?mondayOf(d):d.slice(0,7)},keys=[],seen={};for(var d=from;d<=to;d=addDays(d,weekly?7:28)){var k=keyOf(d);if(!seen[k]){seen[k]=1;keys.push(k)}}var lastK=keyOf(to);if(!seen[lastK])keys.push(lastK);
   var labels=keys.map(function(k){return weekly?shortD(k):k.slice(5)+'/'+k.slice(2,4)});
   var lead=keys.map(function(){return 0}),vent=lead.slice(),per={};users.forEach(function(u){per[u.id]=keys.map(function(){return 0})});
   coh(from,to,com).forEach(function(r){var i=keys.indexOf(keyOf(dOf(r)));if(i>-1)lead[i]++});
-  sales(from,to,com).forEach(function(r){var i=keys.indexOf(keyOf(String(r.sale_on).slice(0,10)));if(i>-1){vent[i]++;if(per[r.assigned_to]&&r.sale_amount!=null)per[r.assigned_to][i]+=+r.sale_amount}});
+  sales(from,to,com).forEach(function(r){var i=keys.indexOf(keyOf(String(r.sale_on).slice(0,10)));if(i>-1){vent[i]++;if(per[r.assigned_to]&&r.sale_amount!=null&&r.sale_vat!=='TTC')per[r.assigned_to][i]+=+r.sale_amount}});
   var cum=users.map(function(u,i){var a=0;return{name:u.full_name,color:PAL[i%PAL.length],values:per[u.id].map(function(v){a+=v;return a})}}).filter(function(s){return s.values[s.values.length-1]>0});
   var cohort=coh(from,to,com),cnt=function(fn){var m={};cohort.forEach(function(r){var k=fn(r);if(k==null)return;m[k]=m[k]||{n:0,v:0,ex:0};m[k].n++;var f=fl(r);if(f.ex){m[k].ex++;if(f.vt)m[k].v++}});return m};
   var bySrc=cnt(function(r){return r.source||'(non renseignée)'}),byWk=cnt(function(r){return (r.works&&r.works[0])||null}),byDep=cnt(function(r){var c=String(r.cp||r.postal_code||'').slice(0,2);return /^\d\d$/.test(c)?c:null});
   var st={};cohort.forEach(function(r){st[r.stage]=(st[r.stage]||0)+1});
-  var delays=[];cohort.forEach(function(r){var a=(accts[r.id]||[]).filter(function(x){return x.type==='no_answer'||x.type==='contact'||x.type==='appointment'}).sort(function(p,q){return p.at<q.at?-1:1})[0];if(a&&r.assigned_at){var h=(new Date(a.at)-new Date(r.assigned_at))/36e5;if(h>=0&&h<24*60)delays.push(h)}});
   var spark=function(arr){return arr};
-  return{G:G,P:P,perCom:perCom,labels:labels,lead:lead,vent:vent,cum:cum,bySrc:bySrc,byWk:byWk,byDep:byDep,stages:st,delayH:delays.length?delays.reduce(function(a,b){return a+b},0)/delays.length:null,lateTotal:late.length,days:days,from:from,to:to}}
+  return{G:G,P:P,perCom:perCom,labels:labels,lead:lead,vent:vent,cum:cum,bySrc:bySrc,byWk:byWk,byDep:byDep,stages:st,delayH:G.delayMin==null?null:G.delayMin/60,lateTotal:late.length,days:days,from:from,to:to}}
 function deltaPts(cur,prev){if(cur==null||prev==null)return '';var d=Math.round((cur-prev)*10)/10;if(!d)return '<span class="dl up">= stable</span>';return '<span class="dl '+(d>0?'up':'down')+'">'+(d>0?'▲ +':'▼ ')+String(d).replace('.',',').replace('-','')+' pts</span>'}
 function delta(cur,prev,money_){if(prev==null||prev===0)return cur>0?'<span class="dl up">nouveau</span>':'';var p=Math.round(100*(cur-prev)/prev);return '<span class="dl '+(p>=0?'up':'down')+'">'+(p>=0?'▲ +':'▼ ')+p+' %</span>'}
 function comboChart(labels,bars,line){var W=680,H=230,l=34,r=34,t=14,b=28,n=labels.length,bw=(W-l-r)/n,mb=Math.max.apply(null,bars)||1,ml=Math.max.apply(null,line)||1,id='cg'+(++_gid),out='<svg viewBox="0 0 '+W+' '+H+'" class="chart" role="img" aria-label="Contacts reçus et ventes par période"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a9fd6"/><stop offset="1" stop-color="#2a9fd6" stop-opacity=".25"/></linearGradient></defs>';
@@ -530,7 +591,7 @@ function hbars(items,fmt){var mx=Math.max.apply(null,items.map(function(i){retur
 function funnelHtml(G){var steps=[['Contacts reçus',G.n,'#2a9fd6'],['Exploitables',G.ex,'#3ab0c8'],['Contactés',G.ct,'#45c0a8'],['Rendez-vous',G.rdv,'#52cc7e'],['Devis',G.dv,'#62dd4a'],['Ventes',G.vt,'#f6c642']],mx=steps[0][1]||1;
   return '<div class="fun">'+steps.map(function(s,i){var w=Math.max(8,100*s[1]/mx),prev=i?steps[i-1][1]:null;return '<div class="fr"><div class="fl">'+s[0]+'</div><div class="ft"><div class="ff" style="width:'+w.toFixed(1)+'%;background:'+s[2]+'"><b>'+s[1]+'</b></div></div><div class="fp">'+(i?fpct(ratio(s[1],prev))+' <span>de l\'étape préc.</span>':'<span>base 100 %</span>')+'</div></div>'}).join('')+'</div>'}
 function vDash(){var d=ui.dash||(ui.dash={rng:'180',com:'',rank:'ca',demo:false}),src=d.demo?(d.demoData||(d.demoData=demoData())):{reqs:D.reqs,acts:D.acts||[],tasks:D.tasks,profiles:D.profiles};
-  var to=day(0),from=d.rng==='all'?(function(){var m=to;src.reqs.forEach(function(r){var x=String(r.received_on||r.created_at||'').slice(0,10);if(x&&x<m)m=x});return m})():addDays(to,-(+d.rng-1)),M=dashModel(src,{from:from,to:to},d.com||null),G=M.G,P=M.P;
+  var to=day(0),from=d.rng==='all'?(function(){var m=to;src.reqs.forEach(function(r){var x=KPI.recvDay(r);if(x&&x<m)m=x});return m})():addDays(to,-(+d.rng-1)),M=dashModel(src,{from:from,to:to},d.com||null),G=M.G,P=M.P;
   var empty=!d.demo&&!G.n&&!G.ventes,coms=src.profiles.filter(function(u){return u.role==='commercial'});
   var chips=[['30','30 jours'],['90','3 mois'],['180','6 mois'],['365','12 mois'],['all','Tout']].map(function(c){return '<button class="chip'+(d.rng===c[0]?' on':'')+'" data-act="dashp" data-v="'+c[0]+'">'+c[1]+'</button>'}).join('');
   var h='<div class="dhero"><div><h2>Statistiques</h2><p>Résultats commerciaux du '+fD(from)+' au '+fD(to)+(d.com?' · '+esc((coms.filter(function(u){return u.id===d.com})[0]||{}).full_name||''):' · toute l\'équipe')+'</p></div><div class="dctl"><div class="chips">'+chips+'</div><select id="dashc" aria-label="Commercial">'+opt(coms.map(function(u){return [u.id,u.full_name]}),d.com,'Toute l\'équipe')+'</select><button data-act="dashdemo" class="'+(d.demo?'p':'')+'">'+(d.demo?'Quitter l\'exemple':'Voir avec des données d\'exemple')+'</button></div></div>';
@@ -538,13 +599,13 @@ function vDash(){var d=ui.dash||(ui.dash={rng:'180',com:'',rank:'ca',demo:false}
   if(empty)h+='<div class="msg warn">Aucune vente ni aucun contact sur cette période. Les statistiques se remplissent au fil des dossiers : cliquez sur « Voir avec des données d\'exemple » pour découvrir le rendu.</div>';
   var sp=function(a){return sparkline(a,'#62dd4a')};
   h+='<div class="kpis">'+
-   kpi('Chiffre d\'affaires',money(G.ca),delta(G.ca,P.ca),sp(M.cum.length?M.cum.reduce(function(acc,s){return s.values.map(function(v,i){return (acc[i]||0)+v-(i?s.values[i-1]:0)})},[]):M.vent),'HT '+money(G.caHT)+' · TTC '+money(G.caTTC)+(G.sans?' · '+G.sans+' vente(s) sans montant':''),'hero')+
+   kpi('Chiffre d\'affaires HT',money(G.caHT),delta(G.ca,P.ca),sp(M.cum.length?M.cum.reduce(function(acc,s){return s.values.map(function(v,i){return (acc[i]||0)+v-(i?s.values[i-1]:0)})},[]):M.vent),'TTC (séparé, non additionné) '+money(G.caTTC)+(G.sans?' · '+G.sans+' vente(s) sans montant':''),'hero')+
    kpi('Ventes',String(G.ventes),delta(G.ventes,P.ventes),sp(M.vent),G.vt+' dossiers vendus')+
-   kpi('Panier moyen',G.panier?money(G.panier):'—',delta(G.panier||0,P.panier),'','Montant moyen par vente')+
+   kpi('Panier moyen HT',G.panier?money(G.panier):'—',delta(G.panier||0,P.panier),'','Ventes HT avec montant')+
    kpi('Taux de transformation',fpct(G.tVente),deltaPts(G.tVente,P.tVente),'','Ventes / dossiers exploitables ('+G.vt+' sur '+G.ex+')')+
    kpi('Taux de rendez-vous',fpct(G.tRdv),deltaPts(G.tRdv,P.tRdv),'',G.rdv+' RDV sur '+G.ex+' dossiers')+
-   kpi('Contacts reçus',String(G.n),delta(G.n,P.n),sp(M.lead),G.att+' attribués · '+(G.n-G.att)+' en attente')+
-   kpi('Réactivité',M.delayH==null?'—':(M.delayH<1?Math.round(M.delayH*60)+' min':(M.delayH<48?Math.round(M.delayH*10)/10+' h':Math.round(M.delayH/24)+' j')),'','','Délai moyen de 1ʳᵉ action · '+M.lateTotal+' rappel(s) en retard')+'</div>';
+   kpi('Contacts reçus',String(G.n),delta(G.n,P.n),sp(M.lead),G.att+' attribués · '+(G.n-G.att)+' en attente · '+G.sansDate+' sans date de réception (hors période)')+
+   kpi('Réactivité',M.delayH==null?'Non calculable':(M.delayH<1?Math.round(M.delayH*60)+' min':(M.delayH<48?Math.round(M.delayH*10)/10+' h':Math.round(M.delayH/24)+' j')),'','',(M.delayH==null?'Non calculable · ':'')+G.delayN+' dossier(s) pris en compte, '+G.delayExcl+' exclu(s) · '+M.lateTotal+' rappel(s) en retard')+'</div>';
   var rk=M.perCom.slice().sort(function(a,b){return d.rank==='ca'?(b.ca-a.ca||(b.tVente||0)-(a.tVente||0)):((b.tVente||0)-(a.tVente||0)||b.ca-a.ca)});
   var med=['#f6c642','#c3ccd6','#d99a6c'],pod=rk.slice(0,3),order=pod.length===3?[1,0,2]:pod.map(function(_,i){return i});
   var podium='<div class="pod">'+order.map(function(i){var a=pod[i];if(!a)return '';var hgt=[132,104,86][i];return '<div class="pcol"><div class="pn">'+esc(a.u.full_name.split(' ').slice(-1)[0]||a.u.full_name)+'<small>'+esc(a.u.full_name.split(' ')[0])+'</small></div><div class="pv">'+(d.rank==='ca'?money(a.ca):fpct(a.tVente))+'</div><div class="pbar" style="height:'+hgt+'px;background:linear-gradient(180deg,'+med[i]+',#ffffff00)"><span style="background:'+med[i]+'">'+(i+1)+'</span></div></div>'}).join('')+'</div>';
@@ -555,7 +616,7 @@ function vDash(){var d=ui.dash||(ui.dash={rng:'180',com:'',rank:'ca',demo:false}
    '</tbody></table></div><p class="muted small">Dossiers = contacts reçus sur la période, hors doublons et spam. Le chiffre d\'affaires cumule les montants saisis (HT et TTC présentés séparément, jamais convertis).</p></section>'+
    '<section class="card s8"><h3>Contacts reçus et ventes par '+(M.days<=100?'semaine':'mois')+'</h3><ul class="leg inl"><li><i style="background:#2a9fd6"></i>Contacts reçus (échelle de gauche)</li><li><i style="background:#62dd4a"></i>Ventes (échelle de droite)</li></ul>'+comboChart(M.labels,M.lead,M.vent)+'</section>'+
    '<section class="card s4"><h3>Où en sont les dossiers</h3>'+donutC(Object.keys(STAGES).map(function(k,i){return {label:STAGES[k],value:M.stages[k]||0,color:['#94a3b8','#2a9fd6','#45c0a8','#f6c642','#f08a3c','#62dd4a','#17713f','#cbd5e1'][i]}}),String(G.n),'dossiers')+'</section>'+
-   '<section class="card s12"><h3>Chiffre d\'affaires cumulé par commercial</h3>'+(M.cum.length?lineChart(M.labels,M.cum):'<p class="muted">Aucune vente avec montant sur la période.</p>')+'</section>'+
+   '<section class="card s12"><h3>Chiffre d\'affaires HT cumulé par commercial</h3>'+(M.cum.length?lineChart(M.labels,M.cum):'<p class="muted">Aucune vente avec montant sur la période.</p>')+'</section>'+
    '<section class="card s6"><h3>Sources de contacts</h3>'+srcBars(M.bySrc)+'</section>'+
    '<section class="card s6"><h3>Types de travaux</h3>'+donutC(Object.keys(M.byWk).sort(function(a,b){return M.byWk[b].n-M.byWk[a].n}).slice(0,8).map(function(k,i){return {label:k,value:M.byWk[k].n,color:PAL[i%PAL.length]}}),String(G.n),'contacts')+'</section>'+
    '<section class="card s6"><h3>Départements</h3>'+hbars(Object.keys(M.byDep).sort(function(a,b){return M.byDep[b].n-M.byDep[a].n}).slice(0,8).map(function(k){return {label:'Dép. '+k,value:M.byDep[k].n,sub:M.byDep[k]}}),function(i){return i.value+' · '+fpct(ratio(i.sub.v,i.sub.ex))+' vendus'})+'</section>'+
@@ -603,7 +664,7 @@ document.addEventListener('click',async function(ev){if(ev.target.closest('a[hre
   else if(a==='dashp'){ui.dash.rng=t.getAttribute('data-v');render()}
   else if(a==='dashr'){ui.dash.rank=t.getAttribute('data-v');render()}
   else if(a==='dashdemo'){ui.dash.demo=!ui.dash.demo;render()}
-  else if(a==='goto'){ui.f={ids:JSON.parse(t.getAttribute('data-ids'))};ui.view='contacts';ui.page=0;render()}
+  else if(a==='goto'){ui.f={ids:JSON.parse(t.getAttribute('data-ids')),label:t.getAttribute('data-label')||''};ui.view='contacts';ui.page=0;render()}
   else if(a==='open')openReq(id);
   else if(a==='close'){ui.open=null;ui.form=null;render()}
   else if(a==='pg'){ui.page+=+t.getAttribute('data-d');fillTable()}
