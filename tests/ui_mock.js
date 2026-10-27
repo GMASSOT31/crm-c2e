@@ -6,7 +6,7 @@ const stub = `
 window.__DB = {
  profiles:[{id:'adm',full_name:'Admin Test',role:'admin',active:true},{id:'x',full_name:'Commercial X',role:'commercial',active:true},{id:'y',full_name:'Commercial Y',role:'commercial',active:true}],
  sources:[{id:1,name:'Leads Dualsun',active:true}], work_types:[{id:1,name:'Photovoltaïque',active:true}],
- requests:[], activities:[], tasks:[], feedback:[], zone_rules:[]};
+ requests:[], duplicate_reviews:[], activities:[], tasks:[], feedback:[], zone_rules:[]};
 (function(){var n=1;function R(o){var base={contact_id:n,source_id:1,sources:{name:'Leads Dualsun'},request_work_types:[{work_types:{name:'Photovoltaïque'}}],quality:'valide',stage:'a_contacter',archived:false,opt_out:false,version:1,created_at:'2026-10-26T13:00:00Z',received_on:null,received_at:null,import_batch_id:null,alerts:[],assigned_to:null};var r=Object.assign(base,o);r.id=n;r.contacts={display_name:'Contact '+n,phone_raw:'0600000000',city:'Toulouse',postal_code:'31000'};n++;return r}
  var D=window.__DB;
  // 3 dossiers importés sans date de réception (comme en production), 1 daté, 1 RDV importé sans date
@@ -15,7 +15,7 @@ window.__DB = {
    R({quality:'valide',received_on:'2026-10-20',received_precision:'jour',assigned_to:'x'}),R({quality:'valide',received_on:'2026-10-21',assigned_to:'y',stage:'vente_faite',sale_on:'2026-10-25',sale_amount:5000,sale_vat:'HT'}),R({quality:'a_verifier',alerts:['Adresse email douteuse']})];
  var tm=new Date(Date.now()+864e5).toISOString().slice(0,10);D.requests.push(R({quality:'valide',received_on:'2026-10-22',assigned_to:'adm',stage:'rdv_pris',rdv_on:tm,rdv_time:'10:00:00',rdv_origin:'confirme',rdv_status:'planifie'}));D.tasks=[{id:1,request_id:4,kind:'callback',due_at:'2026-10-26T09:00:00Z',status:'open',all_day:false}];
  D.requests.forEach(function(r){r.contacts.email_raw=r.id===4?'a@exemple.test':''; if(r.id===6)r.contacts.phone_raw='';});
- function q(t){var f=[],lim=null;var o={select:function(){return o},eq:function(c,v){f.push([c,v]);return o},order:function(){return o},range:function(a,b){return o},
+ function q(t){var f=[],lim=null;var o={select:function(){return o},eq:function(c,v){f.push([c,v]);return o},is:function(){return o},order:function(){return o},range:function(a,b){return o},
   maybeSingle:function(){return Promise.resolve({data:(window.__DB[t]||[]).filter(function(r){return f.every(function(x){return r[x[0]]===x[1]})})[0]||null,error:null})},
   then:function(a,b){return Promise.resolve({data:(window.__DB[t]||[]).filter(function(r){return f.every(function(x){return r[x[0]]===x[1]})}),error:null}).then(a,b)}};return o}
  window.supabase={createClient:function(){return{from:q,rpc:function(fn,a){if(fn==='set_quality'){window.__DB.requests.forEach(function(r){if(r.id===a.p_request)r.quality=a.p_quality})}if(fn==='simulate_zones'){return Promise.resolve({data:window.__DB.requests.filter(function(r){return !r.assigned_to&&r.stage!=='vente_faite'}).map(function(r,i){return i%2?{id:r.id,status:'non_couvert'}:{id:r.id,status:'ok',owner:'x'}}),error:null})}if(fn==='assign_requests_report'){return Promise.resolve({data:{assigned:a.p_request_ids.length-1,already:0,failed:[{id:a.p_request_ids[0],reason:'INCOMPLET'}]},error:null})}return Promise.resolve({data:null,error:null})},auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:'adm',user_metadata:{}}}}})},signOut:function(){return Promise.resolve({})},onAuthStateChange:function(){return{data:{subscription:{unsubscribe:function(){}}}}}}}}};
@@ -73,6 +73,12 @@ window.__DB = {
   await p.click('button[data-act=close]'); await p.click('button[data-act=confirmyes]'); ok(!(await p.$('.sheet')), 'Après confirmation, la fiche se ferme');
   for (const w of [360, 390, 768, 1366]) { await p.setViewportSize({ width: w, height: 800 }); for (const v of ['home', 'contacts', 'agenda', 'add', 'assign', 'stats', 'dash', 'team', 'fb']) { await p.click('#tabs button[data-v=' + v + ']').catch(() => {}); const ov = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); if (ov > 1) { ok(false, 'Débordement horizontal à ' + w + ' px sur ' + v + ' (' + ov + ' px) : ' + await p.evaluate(() => { const W = window.innerWidth; return [...document.querySelectorAll('#app *')].filter(e => e.getBoundingClientRect().right > W + 1).slice(0, 3).map(e => e.tagName + '#' + e.id + '.' + e.className).join(' | '); })); } } }
   ok(true, 'Largeurs 360 / 390 / 768 / 1366 : pas de défilement horizontal de la page'); await p.setViewportSize({ width: 390, height: 800 });
+  // --- QUA02 : doublons ---
+  await p.click('#tabs button[data-v=contacts]'); await p.click('#tbl a[data-act=open] >> nth=0'); await p.waitForSelector('.sheet'); const dp = await p.innerText('.sheet');
+  ok(/doublons/i.test(dp) && /garder distincts/i.test(dp) && /code postal et ville/i.test(dp), 'Doublons : tableau de comparaison et décisions proposés');
+  await p.click('button[data-act=dupdo][data-d=distinct] >> nth=0'); ok(/justification est obligatoire/.test(await p.innerText('#app')), 'Garder distincts sans justification : refusé');
+  await p.click('button[data-act=dupdo][data-d=doublon] >> nth=0'); ok(/sera marqué doublon/.test(await p.innerText('#confirm')) && /Rien n.est supprimé/.test(await p.innerText('#confirm')), 'Confirmer un doublon : demande de confirmation, rien supprimé');
+  await p.click('button[data-act=confirmno]'); await p.click('button[data-act=close]');
   // --- Lot 4 : attribution en masse et Équipe ---
   await p.click('#tabs button[data-v=assign]'); const as1 = await p.innerText('#app');
   ok(/Dossiers à attribuer ou à réattribuer/.test(as1) && /Simulation des zones/.test(as1), 'Attribution : liste filtrable et simulation des zones');
