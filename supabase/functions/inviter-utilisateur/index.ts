@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0';
 
-// Création d'un compte par l'administrateur : génère un lien d'invitation à usage unique
-// (la personne choisit elle-même son mot de passe). Aucun mot de passe n'est créé ici.
+// Comptes créés par l'administrateur : lien d'invitation à usage unique, ou mot de passe provisoire
+// (affiché une seule fois, changement obligatoire à la première connexion), ou réinitialisation.
 const SITE = 'https://gmassot31.github.io/crm-c2e/';
 const ROLES = ['admin', 'secretariat', 'commercial'];
 const cors = {
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const { data: target } = await adm.from('profiles').select('id,full_name').eq('id', body.reset_user).maybeSingle();
     if (!target) return reply({ error: 'Compte introuvable.' }, 404);
     const pw = newPassword();
-    const { error: ue } = await adm.auth.admin.updateUserById(target.id, { password: pw, user_metadata: { must_change_password: true } });
+    const { error: ue } = await adm.auth.admin.updateUserById(target.id, { password: pw, email_confirm: true, user_metadata: { must_change_password: true } });
     if (ue) return reply({ error: 'Réinitialisation impossible : ' + ue.message }, 400);
     await adm.from('audit_log').insert({ actor: u.user.id, action: 'reset_password', entity: 'profiles', entity_id: target.id });
     return reply({ password: pw, name: target.full_name });
