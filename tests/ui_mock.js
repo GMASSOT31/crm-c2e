@@ -6,7 +6,7 @@ const stub = `
 window.__DB = {
  profiles:[{id:'adm',full_name:'Admin Test',role:'admin',active:true},{id:'x',full_name:'Commercial X',role:'commercial',active:true},{id:'y',full_name:'Commercial Y',role:'commercial',active:true}],
  sources:[{id:1,name:'Leads Dualsun',active:true}], work_types:[{id:1,name:'Photovoltaïque',active:true}],
- requests:[], duplicate_reviews:[], activities:[], tasks:[], feedback:[], zone_rules:[]};
+ requests:[], duplicate_reviews:[], activities:[], tasks:[], feedback:[], zone_rules:[{kind:'postal',value:'31',label:'Commercial X',active:true,user_id:'x'},{kind:'postal',value:'31200',label:'Commercial Y',active:true,user_id:'y'},{kind:'postal',value:'971',label:'Commercial X',active:true,user_id:'x'},{kind:'city',value:'albi',label:'Sans Compte',active:true,user_id:null}]};
 (function(){var n=1;function R(o){var base={contact_id:n,source_id:1,sources:{name:'Leads Dualsun'},request_work_types:[{work_types:{name:'Photovoltaïque'}}],quality:'valide',stage:'a_contacter',archived:false,opt_out:false,version:1,created_at:'2026-10-26T13:00:00Z',received_on:null,received_at:null,import_batch_id:null,alerts:[],assigned_to:null};var r=Object.assign(base,o);r.id=n;r.contacts={display_name:'Contact '+n,phone_raw:'0600000000',city:'Toulouse',postal_code:'31000'};n++;return r}
  var D=window.__DB;
  // 3 dossiers importés sans date de réception (comme en production), 1 daté, 1 RDV importé sans date
@@ -19,7 +19,7 @@ window.__DB = {
  function q(t){var f=[],lim=null;var o={select:function(){return o},eq:function(c,v){f.push([c,v]);return o},is:function(){return o},order:function(){return o},range:function(a,b){return o},
   maybeSingle:function(){return Promise.resolve({data:(window.__DB[t]||[]).filter(function(r){return f.every(function(x){return r[x[0]]===x[1]})})[0]||null,error:null})},
   then:function(a,b){return Promise.resolve({data:(window.__DB[t]||[]).filter(function(r){return f.every(function(x){return r[x[0]]===x[1]})}),error:null}).then(a,b)}};return o}
- window.supabase={createClient:function(){return{from:q,rpc:function(fn,a){if(fn==='set_quality'){window.__DB.requests.forEach(function(r){if(r.id===a.p_request)r.quality=a.p_quality})}if(fn==='simulate_zones'){return Promise.resolve({data:window.__DB.requests.filter(function(r){return !r.assigned_to&&r.stage!=='vente_faite'}).map(function(r,i){return i%2?{id:r.id,status:'non_couvert'}:{id:r.id,status:'ok',owner:'x'}}),error:null})}if(fn==='assign_requests_report'){return Promise.resolve({data:{assigned:a.p_request_ids.length-1,already:0,failed:[{id:a.p_request_ids[0],reason:'INCOMPLET'}]},error:null})}return Promise.resolve({data:null,error:null})},auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:'adm',user_metadata:{}}}}})},signOut:function(){return Promise.resolve({})},onAuthStateChange:function(){return{data:{subscription:{unsubscribe:function(){}}}}}}}}};
+ window.supabase={createClient:function(){return{from:q,rpc:function(fn,a){if(fn==='set_quality'){window.__DB.requests.forEach(function(r){if(r.id===a.p_request)r.quality=a.p_quality})}if(fn==='simulate_zones'){return Promise.resolve({data:window.__DB.requests.filter(function(r){return !r.assigned_to&&r.stage!=='vente_faite'}).map(function(r,i){return i%2?{id:r.id,status:'non_couvert',reason:'aucune'}:{id:r.id,status:'ok',owner:'x'}}),error:null})}if(fn==='assign_requests_report'){return Promise.resolve({data:{assigned:a.p_request_ids.length-1,already:0,failed:[{id:a.p_request_ids[0],reason:'INCOMPLET'}]},error:null})}return Promise.resolve({data:null,error:null})},auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:'adm',user_metadata:{}}}}})},signOut:function(){return Promise.resolve({})},onAuthStateChange:function(){return{data:{subscription:{unsubscribe:function(){}}}}}}}}};
 })();`;
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 800 } });
@@ -104,6 +104,20 @@ window.__DB = {
   await p.click('#tbl tr:has-text("Vente faite") a[data-act=open] >> nth=-1'); await p.waitForSelector('.sheet'); const vt = await p.innerText('.sheet');
   ok(/vente enregistrée/i.test(vt) && /montant nul/.test(vt) && /Corriger la vente/.test(vt), 'Vente : montant nul distingué du montant absent, correction possible');
   await p.click('button[data-act=close]');
+  // --- ATT02 / KPI05 / DAT03 ---
+  await p.click('#tabs button[data-v=team]'); await p.click('button[data-act=teamtab][data-v=zones]'); const zc = await p.innerText('#app');
+  ok(/chevauchement/i.test(zc) && /sans compte/i.test(zc) && /3 chiffres/.test(zc), 'Zones : chevauchements, règles sans compte et codes à 3 chiffres signalés');
+  await p.click('#tabs button[data-v=assign]'); await p.click('button[data-act=simzones]'); ok(/Aucune zone ne correspond/.test(await p.innerText('#app')), 'Simulation : cause « aucune zone » expliquée');
+  await p.click('#tabs button[data-v=stats]'); await p.click('button[data-act=per][data-v="30"]'); const pa = (await p.innerText('#app')).match(/Période appliquée : du [^.]*\./)[0];
+  await p.click('#tabs button[data-v=dash]'); const pb = (await p.innerText('#app')).match(/Période appliquée : du [^.]*\./)[0];
+  ok(pa === pb && /Tout l.historique daté/.test(await p.innerText('#app')), 'Périodes : la même période s\'applique à Pilotage et à Statistiques');
+  await p.click('button[data-act=per][data-v=custom]'); ok(await p.locator('#per_from').count() === 1, 'Périodes : dates précises disponibles');
+  await p.click('#tabs button[data-v=home]'); await p.click('.cnt >> nth=0'); ok(/Retour à « Accueil »/.test(await p.innerText('#app')), 'Carte : la liste ouverte propose un retour à la vue d\'origine');
+  await p.click('button[data-act=backview]'); ok(/Bonjour|Accueil/.test(await p.innerText('#app')), 'Retour à l\'Accueil');
+  await p.click('#tabs button[data-v=add]'); await p.click('button[data-act=addmode][data-m=paste]'); await p.fill('#paste', 'Nom Dubois\nPrénom Laura\nTéléphone 0612345678'); await p.click('button[data-act=parse]');
+  ok(await p.inputValue('#p_last') === 'Dubois' && await p.inputValue('#p_first') === 'Laura' && await p.inputValue('#p_name') === 'Dubois Laura', 'Noms : nom, prénom et nom d\'affichage séparés');
+  await p.fill('#p_first', 'Lauren'); ok(await p.inputValue('#p_name') === 'Dubois Lauren', 'Noms : le nom d\'affichage suit tant qu\'il n\'est pas modifié à la main');
+  await p.fill('#p_name', 'DUBOIS SARL'); await p.fill('#p_first', 'Lau'); ok(await p.inputValue('#p_name') === 'DUBOIS SARL', 'Noms : une raison sociale saisie à la main n\'est pas écrasée');
   // --- Lot 4 : attribution en masse et Équipe ---
   await p.click('#tabs button[data-v=assign]'); const as1 = await p.innerText('#app');
   ok(/Dossiers à attribuer ou à réattribuer/.test(as1) && /Simulation des zones/.test(as1), 'Attribution : liste filtrable et simulation des zones');
