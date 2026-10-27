@@ -25,10 +25,12 @@ CRM privé en français pour C2E Habitat (rénovation énergétique), pensé **d
 - Commits au nom `GMASSOT31 <258298134+GMASSOT31@users.noreply.github.com>` avec les lignes `Co-Authored-By` / `Claude-Session` demandées ; PR terminée par `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 - Après chaque fusion en squash, le hook d'arrêt signale à tort des « commits non poussés » : `git fetch -q origin main && git checkout -q -B claude/suite origin/main`. Ne jamais réécrire l'historique.
 
-## 5. État actuel (26/10/2026)
-- En ligne et fonctionnel : tout ce qui précède. Base remplie : classeurs de septembre (149 contacts) et d'octobre (163 contacts + 255 règles de zones, modifiables dans l'appli), 6 commerciaux + 1 secrétaire (mot de passe provisoire à changer), compte « admin ».
-- Alerte mail : fonction déployée, **inactive tant que `RESEND_API_KEY` n'est pas ajoutée** (compte Resend gratuit à créer avec gabriel.massot@hotmail.com : l'expéditeur de test `onboarding@resend.dev` n'écrit qu'à cette adresse). Envoi réel non testé.
-- Question en attente : pour les 17 dossiers d'octobre où le commercial du classeur ≠ règle de zone, garder le commercial du classeur (hypothèse par défaut).
+## 5. État actuel (27/10/2026)
+- En ligne : tout ce qui précède **et** les Lots 1 à 5 du cahier des charges du 27/10 (`diagnostic/lot1-constat.md`, `lot4-constat.md`, `recette.md`) : une seule couche de calcul `KPI` (dans `docs/index.html`, testée par `tests/kpi.test.js`), dates de réception/import séparées, alertes qualité et file « à vérifier », liste Contacts refaite, notes signées, cycle du RDV, agenda, attribution en masse avec simulation des zones, Équipe en 3 rubriques, définitions des indicateurs, clavier/mobile.
+- Migrations 12 à 14 appliquées (dates et provenance + sauvegarde `backup_20261027` ; notes/RDV/actions ; attribution en masse). Tests : `./tests/run.sh` (lots 1 à 11 + KPI) et `node tests/ui_mock.js` (navigateur, client simulé).
+- Base : 312 contacts, aucun n'a de date de réception (jamais remplacée par la date d'import) ; 78 validés, 234 à vérifier ; RDV du classeur = « à dater » ou « planifié ».
+- Alerte mail : fonction déployée, **inactive tant que `RESEND_API_KEY` n'est pas ajoutée**. Question en attente : 17 dossiers d'octobre, garder le commercial du classeur (hypothèse par défaut).
+- Après un squash-merge, repartir de main : `git fetch -q origin main && git checkout -q -B <branche> origin/main`, puis `git push --force-with-lease` (la branche distante ne contient que de l'historique déjà fusionné).
 
 ## 6. Prochaines étapes (selon la demande de Gabriel)
 - Essai sur vrais téléphones par les commerciaux ; logo officiel C2E Habitat (le logo actuel est reconstitué).

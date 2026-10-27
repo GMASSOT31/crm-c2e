@@ -62,6 +62,17 @@ window.__DB = {
   ok(/Rappels en retard \(1\)/.test(qv) && /Sans prochaine action/.test(qv), 'Vues rapides avec compteurs');
   await p.click('button[data-act=qvw][data-v=late]'); ok(/1 dossier/.test(await p.innerText('#tbl')), 'Vue rapide : rappels en retard');
   await p.click('button[data-act=resetf]');
+  // --- Lot 5 : extraction du nom (T03), clavier, saisie non enregistrée, mobile ---
+  await p.click('#tabs button[data-v=add]');
+  const cas = [['Nom Dubois\nPrénom Laura\nTéléphone 06 12 34 56 78\nAdresse e-mail laura.dubois@exemple.test','Dubois Laura'],['Nom et prénom : Dubois Laura\nTéléphone 0612345678','Dubois Laura'],['Nom complet\tÉloïse N’Diaye-Martin\nTéléphone 0612345678','Éloïse N’Diaye-Martin'],['Nom du formulaire: Formulaire estimation de votre projet sur le site\nTéléphone 0612345678','']];
+  for (const [txt, want] of cas) { await p.fill('#paste', txt); await p.click('button[data-act=parse]'); const v = await p.inputValue('#p_name').catch(() => ''); ok(v === want, 'Extraction du nom : « ' + txt.split('\n')[0].slice(0, 34) + ' » → « ' + want + ' » (obtenu « ' + v + ' »)'); }
+  await p.click('#tabs button[data-v=contacts]'); await p.focus('#tbl a[data-act=open]'); await p.keyboard.press('Enter'); await p.waitForSelector('.sheet');
+  ok(await p.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-act') === 'close'), 'Clavier : le dossier s\'ouvre avec Entrée et le focus va sur « Fermer »');
+  await p.fill('#nt_text', 'note en cours'); await p.keyboard.press('Escape'); ok(/Fermer sans enregistrer/.test(await p.innerText('#confirm')), 'Saisie non enregistrée : demande de confirmation à la fermeture');
+  await p.keyboard.press('Escape'); ok(await p.inputValue('#nt_text') === 'note en cours', 'Échap sur la confirmation : la saisie est conservée');
+  await p.click('button[data-act=close]'); await p.click('button[data-act=confirmyes]'); ok(!(await p.$('.sheet')), 'Après confirmation, la fiche se ferme');
+  for (const w of [360, 390, 768, 1366]) { await p.setViewportSize({ width: w, height: 800 }); for (const v of ['home', 'contacts', 'agenda', 'add', 'assign', 'stats', 'dash', 'team', 'fb']) { await p.click('#tabs button[data-v=' + v + ']').catch(() => {}); const ov = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); if (ov > 1) { ok(false, 'Débordement horizontal à ' + w + ' px sur ' + v + ' (' + ov + ' px) : ' + await p.evaluate(() => { const W = window.innerWidth; return [...document.querySelectorAll('#app *')].filter(e => e.getBoundingClientRect().right > W + 1).slice(0, 3).map(e => e.tagName + '#' + e.id + '.' + e.className).join(' | '); })); } } }
+  ok(true, 'Largeurs 360 / 390 / 768 / 1366 : pas de défilement horizontal de la page'); await p.setViewportSize({ width: 390, height: 800 });
   // --- Lot 4 : attribution en masse et Équipe ---
   await p.click('#tabs button[data-v=assign]'); const as1 = await p.innerText('#app');
   ok(/Dossiers à attribuer ou à réattribuer/.test(as1) && /Simulation des zones/.test(as1), 'Attribution : liste filtrable et simulation des zones');
@@ -80,6 +91,8 @@ window.__DB = {
   ok(/1 vente/.test(st) || /vente\(s\)/.test(st), 'Pilotage : ventes datées');
   await p.click('#tabs button[data-v=dash]'); await p.waitForSelector('.kpis'); const ds = await p.innerText('#app');
   ok(/Chiffre d.affaires HT/.test(ds) && /Non calculable/.test(ds), 'Statistiques : CA HT et réactivité non calculable');
+  await p.click('#tabs button[data-v=dash]'); await p.click('button[data-act=dashdemo]'); await p.click('#tabs button[data-v=contacts]');
+  ok(/Données fictives/.test(await p.innerText('#app')), 'Mode exemple : bandeau « Données fictives » sur les autres écrans'); await p.click('button[data-act=dashquit]'); ok(!/Données fictives/.test(await p.innerText('#app')), 'Mode exemple : sortie évidente');
   ok(errs.length === 0, 'aucune erreur JavaScript' + (errs.length ? ' : ' + errs.join(' | ') : ''));
   await p.screenshot({ path: process.env.SHOT || '/tmp/ui_stats.png', fullPage: false }); await b.close();
 })();
