@@ -5,7 +5,7 @@ const html = fs.readFileSync(__dirname + '/../docs/index.html', 'utf8');
 const stub = `
 window.__DB = {
  profiles:[{id:'adm',full_name:'Admin Test',role:'admin',active:true},{id:'x',full_name:'Commercial X',role:'commercial',active:true},{id:'y',full_name:'Commercial Y',role:'commercial',active:true}],
- sources:[{id:1,name:'Leads Dualsun',active:true}], work_types:[{id:1,name:'Photovoltaïque',active:true}],
+ sources:[{id:1,name:'Leads Dualsun',active:true},{id:2,name:'Contact téléphonique GOOGLE',active:true},{id:3,name:'Téléphone Google',active:true}], work_types:[{id:1,name:'Photovoltaïque',active:true}],
  requests:[], duplicate_reviews:[], activities:[], tasks:[], feedback:[], zone_rules:[{kind:'postal',value:'31',label:'Commercial X',active:true,user_id:'x'},{kind:'postal',value:'31200',label:'Commercial Y',active:true,user_id:'y'},{kind:'postal',value:'971',label:'Commercial X',active:true,user_id:'x'},{kind:'city',value:'albi',label:'Sans Compte',active:true,user_id:null}]};
 (function(){var n=1;function R(o){var base={contact_id:n,source_id:1,sources:{name:'Leads Dualsun'},request_work_types:[{work_types:{name:'Photovoltaïque'}}],quality:'valide',stage:'a_contacter',archived:false,opt_out:false,version:1,created_at:'2026-10-26T13:00:00Z',received_on:null,received_at:null,import_batch_id:null,alerts:[],assigned_to:null};var r=Object.assign(base,o);r.id=n;r.contacts={display_name:'Contact '+n,phone_raw:'0600000000',city:'Toulouse',postal_code:'31000'};n++;return r}
  var D=window.__DB;
@@ -131,6 +131,11 @@ window.__DB = {
   const roles = await p.evaluate(() => window.__calls.filter(c => c.temp && /^[abc]@/.test(c.email)).map(c => c.email[0] + ':' + c.role).join(','));
   ok(roles === 'a:secretariat,b:commercial', 'Création en lot : « secrétaire » reconnu, rôle inconnu refusé au lieu d\'être mis en commercial (obtenu ' + roles + ')');
   ok(/inconnu/.test(await p.innerText('#app')), 'Création en lot : rôle inconnu signalé');
+  // --- DAT03 : alias de sources ---
+  await p.click('#tabs button[data-v=team]'); await p.click('button[data-act=teamtab][data-v=sources]'); const sc = await p.innerText('#app');
+  ok(/ressemblent/.test(sc) && /Google/.test(sc) && /libellé d.origine/.test(sc), 'Sources : libellés proches signalés, libellé d\'origine conservé');
+  await p.selectOption('select[data-alias="3"]', '2'); ok(/devient un alias/.test(await p.innerText('#confirm')) && /conservé/.test(await p.innerText('#confirm')), 'Sources : rapprochement demandé avec confirmation explicite');
+  await p.click('button[data-act=confirmno]');
   // --- Lot 4 : attribution en masse et Équipe ---
   await p.click('#tabs button[data-v=assign]'); const as1 = await p.innerText('#app');
   ok(/Dossiers à attribuer ou à réattribuer/.test(as1) && /Simulation des zones/.test(as1), 'Attribution : liste filtrable et simulation des zones');
