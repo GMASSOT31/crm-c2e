@@ -18,7 +18,7 @@ window.__DB = {
  function q(t){var f=[],lim=null;var o={select:function(){return o},eq:function(c,v){f.push([c,v]);return o},order:function(){return o},range:function(a,b){return o},
   maybeSingle:function(){return Promise.resolve({data:(window.__DB[t]||[]).filter(function(r){return f.every(function(x){return r[x[0]]===x[1]})})[0]||null,error:null})},
   then:function(a,b){return Promise.resolve({data:(window.__DB[t]||[]).filter(function(r){return f.every(function(x){return r[x[0]]===x[1]})}),error:null}).then(a,b)}};return o}
- window.supabase={createClient:function(){return{from:q,rpc:function(fn,a){if(fn==='set_quality'){window.__DB.requests.forEach(function(r){if(r.id===a.p_request)r.quality=a.p_quality})}return Promise.resolve({data:null,error:null})},auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:'adm',user_metadata:{}}}}})},signOut:function(){return Promise.resolve({})},onAuthStateChange:function(){return{data:{subscription:{unsubscribe:function(){}}}}}}}}};
+ window.supabase={createClient:function(){return{from:q,rpc:function(fn,a){if(fn==='set_quality'){window.__DB.requests.forEach(function(r){if(r.id===a.p_request)r.quality=a.p_quality})}if(fn==='simulate_zones'){return Promise.resolve({data:window.__DB.requests.filter(function(r){return !r.assigned_to&&r.stage!=='vente_faite'}).map(function(r,i){return i%2?{id:r.id,status:'non_couvert'}:{id:r.id,status:'ok',owner:'x'}}),error:null})}if(fn==='assign_requests_report'){return Promise.resolve({data:{assigned:a.p_request_ids.length-1,already:0,failed:[{id:a.p_request_ids[0],reason:'INCOMPLET'}]},error:null})}return Promise.resolve({data:null,error:null})},auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:'adm',user_metadata:{}}}}})},signOut:function(){return Promise.resolve({})},onAuthStateChange:function(){return{data:{subscription:{unsubscribe:function(){}}}}}}}}};
 })();`;
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 800 } });
@@ -62,6 +62,19 @@ window.__DB = {
   ok(/Rappels en retard \(1\)/.test(qv) && /Sans prochaine action/.test(qv), 'Vues rapides avec compteurs');
   await p.click('button[data-act=qvw][data-v=late]'); ok(/1 dossier/.test(await p.innerText('#tbl')), 'Vue rapide : rappels en retard');
   await p.click('button[data-act=resetf]');
+  // --- Lot 4 : attribution en masse et Équipe ---
+  await p.click('#tabs button[data-v=assign]'); const as1 = await p.innerText('#app');
+  ok(/Dossiers à attribuer ou à réattribuer/.test(as1) && /Simulation des zones/.test(as1), 'Attribution : liste filtrable et simulation des zones');
+  await p.click('button[data-act=selpage]'); ok(/\d+ dossier\(s\) sélectionné/.test(await p.innerText('#asbar')), 'Attribution : barre de sélection visible');
+  await p.click('button[data-act=simzones]'); ok(/attribuables/.test(await p.innerText('#app')), 'Simulation : résultat sans rien modifier');
+  await p.selectOption('#atarget', 'x'); await p.click('button[data-act=aspreview]'); const pv = await p.innerText('#app');
+  ok(/Prévisualisation/.test(pv) && /→/.test(pv), 'Prévisualisation : charge avant → après');
+  await p.click('button[data-act=doassign]'); await p.click('button[data-act=confirmyes]'); await p.waitForTimeout(300);
+  const rp = await p.innerText('#app'); ok(/Résultat de l.attribution/.test(rp) && /incomplet/i.test(rp), 'Rapport : succès et échecs par motif');
+  await p.click('#tabs button[data-v=team]'); ok(/Utilisateurs et accès/.test(await p.innerText('#app')) && /Secteurs et attribution automatique/.test(await p.innerText('#app')) && /Reprise historique/.test(await p.innerText('#app')), 'Équipe : trois sous-rubriques');
+  await p.click('button[data-act=teamtab][data-v=zones]'); ok(/Zones d.attribution automatique/.test(await p.innerText('#app')), 'Équipe : secteurs');
+  await p.click('button[data-act=teamtab][data-v=users]'); await p.click('button[data-act=toggleu] >> nth=1'); ok(/dossier\(s\) ouvert\(s\) passeront/.test(await p.innerText('#confirm')), 'Désactivation : conséquences expliquées');
+  await p.click('button[data-act=confirmno]');
   await p.click('#tabs button[data-v=stats]'); const st = await p.innerText('#app');
   ok(/Date de réception|Sans date de réception/.test(st) && /non calculable/i.test(st), 'Pilotage : réactivité/taux non calculables sans données');
   ok(/1 vente/.test(st) || /vente\(s\)/.test(st), 'Pilotage : ventes datées');
